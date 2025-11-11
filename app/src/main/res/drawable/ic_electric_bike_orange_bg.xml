@@ -1,0 +1,15 @@
+<!-- This is a placeholder. You can replace it with your real vector. -->
+<!-- It's just the 'ic_electric_bike_orange' vector with a circular 'card_light_orange' background -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/primaryOrangeLight" />
+            <size android:width="40dp" android:height="40dp" />
+        </shape>
+    </item>
+    <item
+        android:drawable="@drawable/ic_electric_bike_orange"
+        android:gravity="center"
+        android:width="24dp"
+        android:height="24dp" />
+</layer-list>

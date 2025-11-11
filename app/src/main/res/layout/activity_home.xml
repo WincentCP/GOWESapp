@@ -360,9 +360,9 @@
         android:layout_height="wrap_content"
         android:src="@drawable/ic_qr_scan"
         app:backgroundTint="@color/primaryOrange"
-        app:tint="@colorE/white"
+        app:tint="@color/white"
         app:layout_anchor="@id/bottom_app_bar"
         app:maxImageSize="32dp"
-        android:contentDescription="Scan QR Code" />
+        android:contentDescription="@string/nav_scan" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -1,0 +1,6 @@
+<!-- This is a placeholder drawable. You can replace this with a real .png image file. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/dividerColor" />
+    <corners android:radius="4dp" />
+</shape>
