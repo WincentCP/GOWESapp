@@ -1,11 +1,10 @@
 package edu.uph.m23si1.gowesapp;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.util.Size;
 import android.view.View;
@@ -16,6 +15,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
@@ -23,10 +23,27 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+// --- IMPORT MLKIT BARU ---
+import com.google.android.gms.tasks.Task;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.mlkit.vision.barcode.BarcodeScanner;
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions;
+import com.google.mlkit.vision.barcode.BarcodeScanning;
+import com.google.mlkit.vision.barcode.common.Barcode;
+import com.google.mlkit.vision.common.InputImage;
 
+// --- IMPORT FIREBASE ---
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+@androidx.camera.core.ExperimentalGetImage
 public class ScanQrActivity extends AppCompatActivity {
 
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
@@ -39,7 +56,10 @@ public class ScanQrActivity extends AppCompatActivity {
     private ImageView ivBack;
 
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
-    private Handler navigationHandler = new Handler(Looper.getMainLooper()); // Handler for the 5-second delay
+    private ExecutorService cameraExecutor;
+    private BarcodeScanner barcodeScanner; // ML Kit Scanner
+
+    private boolean isScanningPaused = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,20 +75,37 @@ public class ScanQrActivity extends AppCompatActivity {
         ivBack.setOnClickListener(v -> finish());
         btnGoBack.setOnClickListener(v -> finish());
 
-        // Check for camera permission
+        // Periksa izin kamera
         if (isCameraPermissionGranted()) {
             startCamera();
         } else {
             requestCameraPermission();
         }
 
-        // --- Add logic here to check if a ride is active ---
-        // boolean isRideActive = ...;
-        // if (isRideActive) {
-        //     showWarningLayout();
-        // } else {
-        //     showScannerLayout();
-        // }
+        // Cek status perjalanan aktif dari Firestore (Perbaikan Bug 3)
+        checkActiveRideStatus();
+    }
+
+    private void checkActiveRideStatus() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            finish(); // Tidak ada pengguna, kembali
+            return;
+        }
+
+        DocumentReference userDoc = FirebaseFirestore.getInstance().collection("users").document(user.getUid());
+        userDoc.get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                Boolean isActiveRide = documentSnapshot.getBoolean("isActiveRide");
+                if (isActiveRide != null && isActiveRide) {
+                    // Jika perjalanan aktif, tunjukkan peringatan
+                    showWarningLayout();
+                } else {
+                    // Jika tidak ada perjalanan, mulai pemindai
+                    showScannerLayout();
+                }
+            }
+        });
     }
 
     private boolean isCameraPermissionGranted() {
@@ -86,18 +123,27 @@ public class ScanQrActivity extends AppCompatActivity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startCamera();
             } else {
-                Toast.makeText(this, "Camera permission is required to scan QR codes", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Camera permission is required to scan QR codes", Toast.LENGTH_LONG).show();
                 finish();
             }
         }
     }
 
     private void startCamera() {
+        cameraExecutor = Executors.newSingleThreadExecutor();
+
+        // --- Inisialisasi ML Kit Scanner ---
+        BarcodeScannerOptions options = new BarcodeScannerOptions.Builder()
+                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                .build();
+        barcodeScanner = BarcodeScanning.getClient(options);
+        // --- Selesai Inisialisasi ---
+
         cameraProviderFuture = ProcessCameraProvider.getInstance(this);
         cameraProviderFuture.addListener(() -> {
             try {
                 ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                bindCameraPreview(cameraProvider);
+                bindCameraUseCases(cameraProvider);
             } catch (ExecutionException | InterruptedException e) {
                 Log.e(TAG, "Error starting camera", e);
                 Toast.makeText(this, "Error starting camera: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -105,7 +151,8 @@ public class ScanQrActivity extends AppCompatActivity {
         }, ContextCompat.getMainExecutor(this));
     }
 
-    private void bindCameraPreview(@NonNull ProcessCameraProvider cameraProvider) {
+    @SuppressLint("UnsafeOptInUsageError")
+    private void bindCameraUseCases(@NonNull ProcessCameraProvider cameraProvider) {
         // 1. Set up Preview
         Preview preview = new Preview.Builder()
                 .setTargetResolution(new Size(1280, 720))
@@ -117,36 +164,49 @@ public class ScanQrActivity extends AppCompatActivity {
 
         preview.setSurfaceProvider(cameraPreview.getSurfaceProvider());
 
-        // 2. Bind only the preview to the camera
+        // 2. Set up ImageAnalysis untuk pemindaian QR
+        ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+                .setTargetResolution(new Size(1280, 720))
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build();
+
+        // --- INI ADALAH LOGIKA PEMINDAI QR YANG BARU ---
+        imageAnalysis.setAnalyzer(cameraExecutor, imageProxy -> {
+            if (isScanningPaused || imageProxy.getImage() == null) {
+                imageProxy.close();
+                return;
+            }
+
+            // Ubah ImageProxy ke InputImage ML Kit
+            InputImage image = InputImage.fromMediaImage(imageProxy.getImage(), imageProxy.getImageInfo().getRotationDegrees());
+
+            // Proses gambar menggunakan ML Kit
+            Task<List<Barcode>> result = barcodeScanner.process(image)
+                    .addOnSuccessListener(barcodes -> {
+                        if (!barcodes.isEmpty()) {
+                            isScanningPaused = true; // Hentikan pemindaian setelah berhasil
+                            String qrCodeValue = barcodes.get(0).getRawValue();
+                            Log.d(TAG, "QR Code detected: " + qrCodeValue);
+
+                            // Kirim ID motor ke BikeDetailsActivity
+                            Intent intent = new Intent(ScanQrActivity.this, BikeDetailsActivity.class);
+                            intent.putExtra("BIKE_ID", qrCodeValue);
+                            startActivity(intent);
+                            finish(); // Tutup pemindai
+                        }
+                    })
+                    .addOnFailureListener(e -> Log.e(TAG, "Barcode scanning failed", e))
+                    .addOnCompleteListener(task -> imageProxy.close()); // Selalu tutup imageProxy
+        });
+        // --- AKHIR LOGIKA PEMINDAI BARU ---
+
+        // Bind semua use case ke kamera
         try {
-            cameraProvider.unbindAll(); // Unbind previous cases
-            cameraProvider.bindToLifecycle(this, cameraSelector, preview);
+            cameraProvider.unbindAll(); // Unbind case sebelumnya
+            cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis);
         } catch (Exception e) {
             Log.e(TAG, "Use case binding failed", e);
         }
-
-        // 3. Start the 5-second timer to navigate automatically
-        navigationHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                navigateToBikeDetails();
-            }
-        }, 5000); // 5000 milliseconds = 5 seconds
-    }
-
-    private void navigateToBikeDetails() {
-        // Check if activity is still running to avoid crash
-        if (isFinishing() || isDestroyed()) {
-            return;
-        }
-
-        Log.d(TAG, "5-second timer finished. Navigating to Bike Details.");
-        Intent intent = new Intent(ScanQrActivity.this, BikeDetailsActivity.class);
-
-        // We're simulating a scan, so let's pass a fake Bike ID
-        intent.putExtra("BIKE_ID", "SIMULATED_BIKE_123");
-        startActivity(intent);
-        finish(); // Close the scanner
     }
 
     private void showWarningLayout() {
@@ -162,7 +222,12 @@ public class ScanQrActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // Stop the handler from running if the activity is destroyed
-        navigationHandler.removeCallbacksAndMessages(null);
+        if (cameraExecutor != null) {
+            cameraExecutor.shutdown();
+        }
+        if (barcodeScanner != null) {
+            // Penting: Tutup scanner untuk membebaskan resource
+            barcodeScanner.close();
+        }
     }
 }

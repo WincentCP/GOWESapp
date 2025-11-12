@@ -1,12 +1,9 @@
+// File: /settings.gradle.kts
+// Ini adalah versi yang lebih sederhana dan lebih kuat
+
 pluginManagement {
     repositories {
-        google {
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
-            }
-        }
+        google()
         mavenCentral()
         gradlePluginPortal()
     }
@@ -21,4 +18,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "GowesApp"
 include(":app")
- 

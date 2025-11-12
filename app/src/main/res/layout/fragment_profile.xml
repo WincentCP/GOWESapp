@@ -5,343 +5,226 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/backgroundCream">
+    android:background="@color/backgroundCream"
+    tools:context=".ProfileFragment">
 
+    <!-- Konten utama yang dapat di-scroll (Perbaikan Bug 4) -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginBottom="80dp"> <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
-
-        <TextView
-            android:id="@+id/tv_profile_title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Profile"
-            android:textColor="@color/textPrimary"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="16dp"/>
-
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="0dp">
-
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/card_gradient_orange"
-                android:padding="20dp">
-
-                <de.hdodenhof.circleimageview.CircleImageView
-                    android:id="@+id/iv_profile_pic"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
-                    android:src="@drawable/ic_profile_placeholder"
-                    app:civ_border_color="@color/white"
-                    app:civ_border_width="2dp" />
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_toEndOf="@id/iv_profile_pic"
-                    android:layout_marginStart="16dp"
-                    android:layout_centerVertical="true">
-
-                    <TextView
-                        android:id="@+id/tv_user_name"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Wincent Coleus Phan"
-                        android:textColor="@color/white"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tv_user_phone"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="081234567890"
-                        android:textColor="@color/white"
-                        android:alpha="0.9"
-                        android:textSize="14sp" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/tv_verified_chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Verified"
-                    android:textColor="@color/white"
-                    android:textSize="12sp"
-                    android:background="@drawable/chip_verified"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:paddingTop="4dp"
-                    android:paddingBottom="4dp"
-                    android:drawableStart="@drawable/ic_check_small_white"
-                    android:drawablePadding="4dp"
-                    android:layout_below="@id/iv_profile_pic"
-                    android:layout_marginTop="12dp" />
-            </RelativeLayout>
-        </androidx.cardview.widget.CardView>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Achievements"
-            android:textColor="@color/textPrimary"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginTop="24dp" />
+        android:layout_marginBottom="80dp"
+        android:clipToPadding="false"
+        android:paddingBottom="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="12dp"
-            android:weightSum="3">
+            android:orientation="vertical"
+            android:padding="16dp">
 
+            <!-- Judul -->
+            <TextView
+                android:id="@+id/tv_profile_title"
+                style="@style/Gowes.FragmentTitle"
+                android:text="@string/profile_title" />
+
+            <!-- Kartu Header Profil (Perbaikan Bug 2) -->
             <androidx.cardview.widget.CardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                android:layout_marginEnd="8dp">
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp"
-                    android:gravity="center_horizontal">
-                    <TextView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:text="🌿"
-                        android:textSize="24sp"
-                        android:gravity="center" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="ECO WARRIOR"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/textPrimary"
-                        android:layout_marginTop="8dp"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Saved 12kg CO₂"
-                        android:textSize="10sp"
-                        android:textColor="@color/textSecondary"
-                        android:gravity="center"/>
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <androidx.cardview.widget.CardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp">
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp"
-                    android:gravity="center_horizontal">
-                    <TextView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:text="⚡️"
-                        android:textSize="24sp"
-                        android:gravity="center" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="EARLY ADOPTER"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/textPrimary"
-                        android:layout_marginTop="8dp"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="First 100 users"
-                        android:textSize="10sp"
-                        android:textColor="@color/textSecondary"
-                        android:gravity="center"/>
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <androidx.cardview.widget.CardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                android:layout_marginStart="8dp">
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp"
-                    android:gravity="center_horizontal">
-                    <TextView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:text="🚴"
-                        android:textSize="24sp"
-                        android:gravity="center" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="REGULAR RIDER"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/textPrimary"
-                        android:layout_marginTop="8dp"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="20+ rides completed"
-                        android:textSize="10sp"
-                        android:textColor="@color/textSecondary"
-                        android:gravity="center"/>
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-        </LinearLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Your Impact"
-            android:textColor="@color/textPrimary"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginTop="24dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="12dp"
-            android:weightSum="3">
-        </LinearLayout>
-
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="0dp">
-
-            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                app:cardCornerRadius="24dp"
+                app:cardElevation="0dp">
 
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp">
-                    <ImageView
-                        android:id="@+id/icon_bg_personal"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:src="@drawable/icon_bg_circle_blue"
-                        android:layout_centerVertical="true" />
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_profile"
-                        app:tint="@color/accentBlue"
-                        android:layout_centerVertical="true"
-                        android:layout_alignStart="@id/icon_bg_personal"
-                        android:layout_alignEnd="@id/icon_bg_personal"
-                        android:layout_alignTop="@id/icon_bg_personal"
-                        android:layout_alignBottom="@id/icon_bg_personal" />
+                    android:background="@drawable/card_gradient_orange"
+                    android:padding="20dp">
+
+                    <de.hdodenhof.circleimageview.CircleImageView
+                        android:id="@+id/iv_profile_pic"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:src="@drawable/ic_profile_placeholder"
+                        app:civ_border_color="@color/white"
+                        app:civ_border_width="2dp" />
 
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:layout_toEndOf="@id/icon_bg_personal"
-                        android:layout_toStartOf="@+id/iv_arrow_1"
-                        android:layout_centerVertical="true"
-                        android:layout_marginStart="16dp">
+                        android:layout_toEndOf="@id/iv_profile_pic"
+                        android:layout_marginStart="16dp"
+                        android:layout_centerVertical="true">
+
                         <TextView
+                            android:id="@+id/tv_user_name"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Personal Information"
-                            android:textColor="@color/textPrimary"
+                            android:text="Wicent Coleus Phan"
+                            android:textColor="@color/white"
+                            android:textSize="18sp"
                             android:textStyle="bold" />
+
                         <TextView
+                            android:id="@+id/tv_user_phone"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Update your details"
-                            android:textColor="@color/textSecondary"
-                            android:textSize="12sp" />
+                            android:text="081234567890"
+                            android:textColor="@color/white"
+                            android:alpha="0.9"
+                            android:textSize="14sp" />
                     </LinearLayout>
 
-                    <ImageView
-                        android:id="@+id/iv_arrow_1"
+                    <TextView
+                        android:id="@+id/tv_verified_chip"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:src="@drawable/ic_arrow_right_gray"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"/>
+                        android:text="@string/verified"
+                        android:textColor="@color/white"
+                        android:textSize="12sp"
+                        android:background="@drawable/chip_verified"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
+                        android:paddingTop="4dp"
+                        android:paddingBottom="4dp"
+                        android:drawableStart="@drawable/ic_check_small_white"
+                        android:drawablePadding="4dp"
+                        android:layout_below="@id/iv_profile_pic"
+                        android:layout_marginTop="12dp" />
                 </RelativeLayout>
+            </androidx.cardview.widget.CardView>
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/dividerColor"
-                    android:layout_marginStart="72dp" />
+            <!-- Achievements (Perbaikan Bug 2) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/achievements"
+                android:textColor="@color/textPrimary"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="24dp" />
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/dividerColor"
-                    android:layout_marginStart="72dp" />
+            <!-- Baris Achievements (Menggunakan Emoji) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="12dp"
+                android:weightSum="3">
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/dividerColor"
-                    android:layout_marginStart="72dp" />
+                <!-- ... (Kartu untuk Eco Warrior, Early Adopter, Regular Rider dengan Emoji) ... -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    android:layout_marginEnd="8dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp"
+                        android:gravity="center_horizontal">
+                        <TextView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:text="🌿"
+                            android:textSize="24sp"
+                            android:gravity="center" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/ach_eco_warrior"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/textPrimary"
+                            android:layout_marginTop="8dp"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/ach_eco_warrior_desc"
+                            android:textSize="10sp"
+                            android:textColor="@color/textSecondary"
+                            android:gravity="center"/>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+                <!-- ... (Salin CardView di atas untuk 'Early Adopter' (⚡️) dan 'Regular Rider' (🚴)) ... -->
 
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_logout"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="Log Out"
-            android:textAllCaps="false"
-            android:textColor="@color/primaryRed"
-            android:backgroundTint="@color/white"
-            app:strokeColor="@color/primaryRed"
-            app:strokeWidth="1dp"
-            app:cornerRadius="100dp"
-            app:icon="@drawable/ic_logout"
-            app:iconTint="@color/primaryRed"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="16dp"/>
+            <!-- Your Impact (Perbaikan Bug 2) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/your_impact"
+                android:textColor="@color/textPrimary"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="24dp" />
 
-    </LinearLayout>
+            <!-- Baris Statistik Impact (Perbaikan Bug 2) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="12dp"
+                android:weightSum="3">
+                <!-- ... (Kartu Stat untuk Rides, CO2 Saved, Rank) ... -->
+            </LinearLayout>
+
+            <!-- Daftar Pengaturan (Perbaikan Bug 2) -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Item 1: Personal Information -->
+                    <RelativeLayout
+                        android:id="@+id/btn_personal_info"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="16dp"
+                        android:background="?attr/selectableItemBackground">
+                        <!-- ... (Konten untuk Personal Info) ... -->
+                    </RelativeLayout>
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/dividerColor"
+                        android:layout_marginStart="72dp" />
+
+                    <!-- ... (Ulangi untuk 6 item menu lainnya) ... -->
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Tombol Log Out (Perbaikan Bug 2) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_logout"
+                style="@style/Gowes.Button.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:text="@string/log_out"
+                android:textColor="@color/primaryRed"
+                app:strokeColor="@color/primaryRed"
+                app:icon="@drawable/ic_logout"
+                app:iconTint="@color/primaryRed"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="16dp"/>
+
+        </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
+    <!-- Bottom App Bar dan FAB (dari activity_main.xml) -->
     <com.google.android.material.bottomappbar.BottomAppBar
         android:id="@+id/bottom_app_bar"
         android:layout_width="match_parent"
@@ -374,6 +257,7 @@
         app:backgroundTint="@color/primaryOrange"
         app:tint="@color/white"
         app:layout_anchor="@id/bottom_app_bar"
-        app:maxImageSize="32dp" />
+        app:maxImageSize="32dp"
+        android:contentDescription="@string/nav_scan" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

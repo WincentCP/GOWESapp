@@ -1,24 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Primary App Colors -->
     <color name="primaryOrange">#D97D4D</color>
     <color name="primaryOrangeLight">#FBEAE3</color>
     <color name="primaryGreen">#34A853</color>
     <color name="primaryGreenLight">#E0F5E9</color>
     <color name="primaryRed">#E53935</color>
+    <color name="primaryRedLight">#FDE8E8</color>
 
+    <!-- Background Colors -->
     <color name="backgroundCream">#FEFBF8</color>
     <color name="white">#FFFFFFFF</color>
     <color name="black">#000000</color>
 
+    <!-- Text Colors -->
     <color name="textPrimary">#333333</color>
     <color name="textSecondary">#8A8A8A</color>
     <color name="textOnPrimary">#FFFFFF</color>
     <color name="textGreen">#28A745</color>
 
+    <!-- Accent Colors -->
     <color name="accentBlue">#007AFF</color>
+    <color name="accentBlueLight">#E0F0FF</color>
     <color name="accentPurple">#9B51E0</color>
+    <color name="accentPurpleLight">#F3E5F5</color>
+    <color name="accentYellow">#FFC107</color>
+
+    <!-- Other UI Colors -->
     <color name="dividerColor">#F0F0F0</color>
 
+    <!-- Scanner Screen (Bug 6 Fix) -->
     <color name="scannerBlack">#0A0A0A</color>
-    <color name="scannerOverlay">#A6000000</color> <color name="scannerAccent">#D97D4D</color> <color name="warningYellow">#FFC107</color>
+    <color name="scannerOverlay">#99000000</color> <!-- Was A6000000, 60% alpha is clearer -->
 </resources>

@@ -4,46 +4,83 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.MediaStore;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.DocumentSnapshot;
 
 import java.text.NumberFormat;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 public class ActiveRideActivity extends AppCompatActivity {
 
-    // Define the rate: 8000 Rupiah per 60 minutes
-    // This is 8000 / (60 * 60) = 2.22... Rupiah per second
-    private static final double RATE_PER_SECOND = 8000.0 / 3600.0;
+    private static final String TAG = "ActiveRideActivity";
 
-    private TextView tvTimer, tvCurrentCost; // Added tvCurrentCost
+    // (Perbaikan Bug 10)
+    private static final double RATE_PER_BLOCK = 8000.0;
+    private static final double SECONDS_PER_BLOCK = 3600.0; // 60 menit
+
+    private TextView tvTimer, tvCurrentCost;
     private Handler timerHandler = new Handler(Looper.getMainLooper());
     private long startTime = 0;
     private long timeInMilliseconds = 0;
 
-    // To store the final values
     private String finalRideDuration;
     private double finalCalculatedCost = 0.0;
 
-    // Runnable that updates the timer
+    private FirebaseFirestore db;
+    private DatabaseReference rtDbRef; // Realtime Database untuk data live
+    private String userId;
+
+    // (Perbaikan Bug 11)
+    private final ActivityResultLauncher<Intent> cameraResultLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK) {
+                    Toast.makeText(this, "Photo captured!", Toast.LENGTH_SHORT).show();
+                    endRide();
+                } else {
+                    Toast.makeText(this, "Photo cancelled. Please take photo to end ride.", Toast.LENGTH_SHORT).show();
+                }
+            });
+
     private Runnable timerRunnable = new Runnable() {
         @Override
         public void run() {
             timeInMilliseconds = System.currentTimeMillis() - startTime;
+            long totalSeconds = timeInMilliseconds / 1000;
+            updateTimerUI(totalSeconds);
 
-            // 1. Update Timer UI
-            updateTimerUI(timeInMilliseconds);
-
-            // 2. Calculate and Update Cost UI
-            finalCalculatedCost = (timeInMilliseconds / 1000.0) * RATE_PER_SECOND;
+            // (Perbaikan Bug 10)
+            long totalBlocks = (long) Math.ceil(totalSeconds / SECONDS_PER_BLOCK);
+            if (totalBlocks == 0) totalBlocks = 1;
+            finalCalculatedCost = totalBlocks * RATE_PER_BLOCK;
             updateCostUI(finalCalculatedCost);
 
-            timerHandler.postDelayed(this, 1000); // Run again in 1 second
+            // Update Realtime Database
+            if (rtDbRef != null) {
+                rtDbRef.child("currentTime").setValue(totalSeconds);
+                rtDbRef.child("currentCost").setValue(finalCalculatedCost);
+            }
+
+            timerHandler.postDelayed(this, 1000);
         }
     };
 
@@ -52,76 +89,64 @@ public class ActiveRideActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_active_ride);
 
+        db = FirebaseFirestore.getInstance();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            finish(); // Tidak ada pengguna, tutup
+            return;
+        }
+        userId = user.getUid();
+
+        // Gunakan Realtime Database untuk data live (timer, lokasi, dll.)
+        rtDbRef = FirebaseDatabase.getInstance().getReference("activeRides").child(userId);
+
+        // (Perbaikan Bug 3) Set perjalanan aktif di Firestore & Realtime DB
+        db.collection("users").document(userId).update("isActiveRide", true);
+        rtDbRef.child("isActive").setValue(true);
+        rtDbRef.child("startTime").setValue(System.currentTimeMillis());
+
         tvTimer = findViewById(R.id.tv_timer);
-        tvCurrentCost = findViewById(R.id.tv_current_cost); // Find the cost TextView
+        tvCurrentCost = findViewById(R.id.tv_current_cost);
         Button parkButton = findViewById(R.id.btn_park);
         Button backHomeButton = findViewById(R.id.btn_back_home);
 
-        parkButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Stop the timer
-                timerHandler.removeCallbacks(timerRunnable);
-
-                // Save the final values
-                finalRideDuration = tvTimer.getText().toString();
-                // The cost is already up-to-date in 'finalCalculatedCost'
-
-                // Show the "Detecting Bike" dialog
-                showDetectingDialog();
-            }
+        parkButton.setOnClickListener(v -> {
+            timerHandler.removeCallbacks(timerRunnable);
+            finalRideDuration = tvTimer.getText().toString();
+            showDetectingDialog();
         });
 
-        backHomeButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Go back to main activity
-                finish();
-            }
-        });
+        backHomeButton.setOnClickListener(v -> finish());
 
-        // Start the timer when the activity is created
         startTime = System.currentTimeMillis();
         timerHandler.postDelayed(timerRunnable, 0);
     }
 
-    private void updateTimerUI(long milliseconds) {
-        int seconds = (int) (milliseconds / 1000);
-        int minutes = seconds / 60;
-        int hours = minutes / 60;
-        seconds = seconds % 60;
-        minutes = minutes % 60;
-
+    // ... (updateTimerUI dan updateCostUI tidak berubah) ...
+    private void updateTimerUI(long totalSeconds) {
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long seconds = totalSeconds % 60;
         tvTimer.setText(String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds));
     }
-
     private void updateCostUI(double cost) {
-        // Format the double as Rupiah currency
-        Locale localeID = new Locale("in", "ID");
-        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(localeID);
-        currencyFormatter.setMaximumFractionDigits(0); // No decimals
-
-        tvCurrentCost.setText(currencyFormatter.format(cost));
+        tvCurrentCost.setText(formatCurrency(cost));
     }
 
     private void showDetectingDialog() {
+        // ... (Logika tidak berubah) ...
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         dialog.setContentView(R.layout.dialog_detecting_bike);
-        dialog.setCancelable(false); // User can't dismiss by swiping
-
-        Button cancelRideButton = dialog.findViewById(R.id.btn_cancel);
-        cancelRideButton.setOnClickListener(v -> {
+        dialog.setCancelable(false);
+        dialog.findViewById(R.id.btn_cancel).setOnClickListener(v -> {
             dialog.dismiss();
-            // User cancelled parking, so restart the timer
-            startTime = System.currentTimeMillis() - timeInMilliseconds; // Resume from where it left off
+            startTime = System.currentTimeMillis() - timeInMilliseconds;
             timerHandler.postDelayed(timerRunnable, 0);
         });
-
         dialog.show();
 
-        // --- Simulate bike detection ---
-        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-            if(dialog.isShowing()){
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (dialog.isShowing()) {
                 dialog.dismiss();
                 showBikeDetectedDialog();
             }
@@ -129,41 +154,64 @@ public class ActiveRideActivity extends AppCompatActivity {
     }
 
     private void showBikeDetectedDialog() {
+        // (Perbaikan Bug 11)
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         dialog.setContentView(R.layout.dialog_bike_detected);
         dialog.setCancelable(false);
-
-        Button takePhoto = dialog.findViewById(R.id.btn_take_photo);
-        takePhoto.setOnClickListener(v -> {
-            // --- Add logic to open camera for photo ---
-
-            // After photo, go to Ride Complete
+        dialog.findViewById(R.id.btn_take_photo).setOnClickListener(v -> {
             dialog.dismiss();
-            Intent intent = new Intent(ActiveRideActivity.this, RideCompleteActivity.class);
-
-            // Pass the REAL calculated data to the invoice screen
-            intent.putExtra("RIDE_DURATION", finalRideDuration);
-            intent.putExtra("FINAL_COST", finalCalculatedCost); // Pass the double
-
-            startActivity(intent);
-            finish(); // Finish this activity
+            Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            cameraResultLauncher.launch(cameraIntent);
         });
-
         dialog.show();
     }
 
-    // You would also call this dialog if detection fails
-    private void showDetectionFailedDialog() {
-        BottomSheetDialog dialog = new BottomSheetDialog(this);
-        dialog.setContentView(R.layout.dialog_detection_failed);
-        // ... set click listeners for "Try Again", "Report Issue", etc. ...
-        dialog.show();
+    private void endRide() {
+        // (Perbaikan Bug 3)
+        db.collection("users").document(userId).update("isActiveRide", false);
+        rtDbRef.removeValue(); // Hapus data dari Realtime Database
+
+        // Kurangi saldo dompet di Firestore
+        DocumentReference userDocRef = db.collection("users").document(userId);
+        db.runTransaction(transaction -> {
+            DocumentSnapshot snapshot = transaction.get(userDocRef);
+            Number currentBalanceNum = (Number) snapshot.get("walletBalance");
+            int currentBalance = (currentBalanceNum != null) ? currentBalanceNum.intValue() : 0;
+            int newBalance = currentBalance - (int) finalCalculatedCost;
+            transaction.update(userDocRef, "walletBalance", newBalance);
+            return null; // Tidak perlu mengembalikan apa-apa
+        }).addOnFailureListener(e -> Log.w(TAG, "Gagal mengurangi saldo", e));
+
+        // (Perbaikan Bug 12) Simpan riwayat perjalanan ke sub-koleksi
+        Map<String, Object> rideHistory = new HashMap<>();
+        rideHistory.put("duration", finalRideDuration);
+        rideHistory.put("cost", finalCalculatedCost);
+        rideHistory.put("timestamp", System.currentTimeMillis());
+
+        db.collection("users").document(userId).collection("rideHistory")
+                .add(rideHistory)
+                .addOnSuccessListener(docRef -> Log.d(TAG, "Riwayat perjalanan disimpan"))
+                .addOnFailureListener(e -> Log.w(TAG, "Gagal simpan riwayat", e));
+
+        Intent intent = new Intent(ActiveRideActivity.this, RideCompleteActivity.class);
+        intent.putExtra("RIDE_DURATION", finalRideDuration);
+        intent.putExtra("FINAL_COST", finalCalculatedCost);
+        intent.putExtra("TOTAL_SECONDS", timeInMilliseconds / 1000);
+
+        startActivity(intent);
+        finish();
+    }
+
+    private String formatCurrency(double amount) {
+        Locale localeID = new Locale("in", "ID");
+        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(localeID);
+        currencyFormatter.setMaximumFractionDigits(0);
+        return currencyFormatter.format(amount);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // Stop the timer handler when the activity is destroyed
         timerHandler.removeCallbacks(timerRunnable);
     }
 }

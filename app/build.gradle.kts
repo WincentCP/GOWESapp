@@ -1,5 +1,7 @@
 plugins {
-    alias(libs.plugins.android.application)
+    id("com.android.application")
+    // DIUBAH: Menggunakan alias camelCase
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -8,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "edu.uph.m23si1.gowesapp"
-        minSdk = 26 // <-- 1. FIX: Changed from 24 to 26
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -33,24 +35,33 @@ android {
 
 dependencies {
 
-    // --- THIS BLOCK IS NOW FIXED ---
-
-    // Default dependencies (using corrected aliases from your TOML)
-    implementation(libs.androidx.core.ktx) // Added this to TOML
-    implementation(libs.appcompat)         // Corrected from libs.androidx.appcompat
+    // Dependensi default (dari TOML Anda)
+    // DIUBAH: Menggunakan alias camelCase
+    implementation(libs.androidxCoreKtx)
+    implementation(libs.appcompat)
     implementation(libs.material)
-    implementation(libs.constraintlayout)  // Corrected from libs.androidx.constraintlayout
+    implementation(libs.constraintlayout)
     testImplementation(libs.junit)
-    androidTestImplementation(libs.ext.junit)     // Corrected from libs.androidx.junit
-    androidTestImplementation(libs.espresso.core) // Corrected from libs.androidx.espresso.core
+    androidTestImplementation(libs.extJunit)
+    androidTestImplementation(libs.espressoCore)
 
-    // --- ADDED DEPENDENCIES (from new TOML entries) ---
-
-    // For the circular profile picture
+    // Dependensi kustom (dari TOML Anda)
     implementation(libs.circleimageview)
+    implementation(libs.androidxCameraCamera2)
+    implementation(libs.androidxCameraLifecycle)
+    implementation(libs.androidxCameraView)
+    implementation(libs.mlkitBarcodeScanning)
+    implementation(libs.guava)
+}
+    // 4. Tambahkan dependensi Firebase
+    // Import Bill of Materials (BOM)
+    implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
 
-    // For the QR Code Scanner Camera
-    implementation(libs.androidx.camera.camera2)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
+    // Tambahkan dependensi untuk produk Firebase
+    implementation(libs.firebaseAuth)
+    implementation(libs.firebaseFirestore)
+    implementation(libs.firebaseDatabase)
+
+    // 5. Tambahkan dependensi ML Kit (pengganti Firebase ML Vision)
+    implementation(libs.mlkitBarcodeScanning)
 }

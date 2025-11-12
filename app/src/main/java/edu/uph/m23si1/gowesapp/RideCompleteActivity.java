@@ -13,48 +13,59 @@ import java.util.Locale;
 
 public class RideCompleteActivity extends AppCompatActivity {
 
-    private TextView tvRideDuration, tvAmountPaid, tvThankYou;
+    // (Perbaikan Bug 12) Konstanta untuk perhitungan CO2
+    private static final double AVG_BIKE_SPEED_KMH = 15.0; // Kecepatan rata-rata sepeda
+    private static final double CO2_GRAMS_PER_KM_CAR = 120.0; // Rata-rata CO2 mobil
+
+    private TextView tvRideDuration, tvAmountPaid, tvThankYou, tvCo2Saved;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ride_complete);
 
-        // Find views
         tvRideDuration = findViewById(R.id.tv_ride_duration);
         tvAmountPaid = findViewById(R.id.tv_amount_paid);
         tvThankYou = findViewById(R.id.tv_subtitle);
+        tvCo2Saved = findViewById(R.id.tv_co2_saved); // Pastikan ID ini ada di XML
 
-        // Get data from the Intent
+        // Ambil data dari Intent
         String duration = getIntent().getStringExtra("RIDE_DURATION");
-        // Get the cost as a double, with a default of 0.0
         double cost = getIntent().getDoubleExtra("FINAL_COST", 0.0);
+        long totalSeconds = getIntent().getLongExtra("TOTAL_SECONDS", 0);
 
-        // Populate the views
-        if (duration != null) {
-            tvRideDuration.setText(duration);
+        // Isi detail perjalanan
+        tvRideDuration.setText(duration);
+        tvAmountPaid.setText(formatCurrency(cost));
+
+        // (Perbaikan Bug 12) Hitung dan tampilkan CO2 yang dihemat
+        double totalHours = totalSeconds / 3600.0;
+        double distanceKm = totalHours * AVG_BIKE_SPEED_KMH;
+        double co2SavedGrams = distanceKm * CO2_GRAMS_PER_KM_CAR;
+
+        // Format ke "10g CO2" atau "1.2kg CO2"
+        String co2SavedText;
+        if (co2SavedGrams < 1000) {
+            co2SavedText = String.format(Locale.getDefault(), "%.0fg CO₂", co2SavedGrams);
+        } else {
+            co2SavedText = String.format(Locale.getDefault(), "%.1fkg CO₂", co2SavedGrams / 1000.0);
         }
+        tvCo2Saved.setText(co2SavedText);
 
-        // Format the double cost into "Rp 7.600" style
+
+        // --- Tombol untuk kembali ke Home ---
+        Button backHomeButton = findViewById(R.id.btn_back_home);
+        backHomeButton.setOnClickListener(v -> {
+            Intent intent = new Intent(RideCompleteActivity.this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+        });
+    }
+
+    private String formatCurrency(double amount) {
         Locale localeID = new Locale("in", "ID");
         NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(localeID);
-        currencyFormatter.setMaximumFractionDigits(0); // No decimals
-        tvAmountPaid.setText(currencyFormatter.format(cost));
-
-
-        // You can also get user name from shared preferences
-        // String userName = "Wicent";
-        // tvThankYou.setText("Thank you, " + userName + "! Stay safe 🌿");
-
-        Button backHomeButton = findViewById(R.id.btn_back_home);
-        backHomeButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Go back to MainActivity
-                Intent intent = new Intent(RideCompleteActivity.this, MainActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-            }
-        });
+        currencyFormatter.setMaximumFractionDigits(0);
+        return currencyFormatter.format(amount);
     }
 }

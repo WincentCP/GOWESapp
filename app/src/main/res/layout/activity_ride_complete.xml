@@ -8,19 +8,17 @@
     android:background="@color/backgroundCream"
     tools:context=".RideCompleteActivity">
 
-    <!-- Bottom "Back to Home" Button -->
+    <!-- Tombol "Back to Home" di Bawah -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_back_home"
         style="@style/Gowes.Button.Primary"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="@string/back_to_home"
         android:layout_alignParentBottom="true"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="16dp"
+        android:text="@string/back_to_home" />
 
-    <!-- Download/Share Buttons -->
+    <!-- Tombol Download/Share -->
     <LinearLayout
         android:id="@+id/ll_share_buttons"
         android:layout_width="match_parent"
@@ -56,8 +54,8 @@
 
     </LinearLayout>
 
-    <!-- Main Scrolling Content -->
-    <ScrollView
+    <!-- Konten Utama yang Dapat Di-scroll -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/ll_share_buttons"
@@ -68,7 +66,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Green Header Section -->
+            <!-- Bagian Header Hijau -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="220dp"
@@ -82,7 +80,7 @@
                     android:src="@drawable/ic_check_circle_large_white"
                     android:layout_centerHorizontal="true"
                     android:layout_marginTop="24dp"
-                    android:contentDescription="@string/ride_complete_title" />
+                    android:contentDescription="Ride Complete Checkmark"/>
 
                 <TextView
                     android:id="@+id/tv_title"
@@ -105,20 +103,19 @@
                     android:alpha="0.9"
                     android:textSize="16sp"
                     android:layout_below="@id/tv_title"
-                    android:layout_centerHorizontal="true"
-                    tools:text="Thank you, Wicent! Stay safe 🌿" />
+                    android:layout_centerHorizontal="true" />
 
             </RelativeLayout>
 
-            <!-- Card Content Area -->
+            <!-- Area Konten Kartu -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp"
-                android:layout_marginTop="-40dp"> <!-- Overlap the header -->
+                android:layout_marginTop="-40dp"> <!-- Tumpang tindih dengan header -->
 
-                <!-- Ride Details Card -->
+                <!-- Kartu Detail Perjalanan -->
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -138,16 +135,8 @@
                             android:textColor="@color/textPrimary"
                             android:textSize="18sp"
                             android:textStyle="bold"
-                            android:drawablePadding="8dp"
-                            app:drawableStartCompat="@drawable/ic_electric_bike_orange" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Electric"
-                            android:textColor="@color/primaryOrange"
-                            android:textSize="12sp"
-                            android:layout_marginStart="32dp"/>
+                            android:drawableStart="@drawable/ic_electric_bike_orange"
+                            android:drawablePadding="8dp"/>
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -161,7 +150,6 @@
                             android:id="@+id/tv_ride_duration"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            tools:text="50 min 35 sec"
                             android:text="00:00:00"
                             android:textColor="@color/textPrimary"
                             android:textSize="22sp"
@@ -169,7 +157,7 @@
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
-                <!-- Payment Summary Card -->
+                <!-- Kartu Ringkasan Pembayaran -->
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -192,7 +180,6 @@
                             android:textStyle="bold"
                             android:layout_marginBottom="12dp" />
 
-                        <!-- Row 1: Ride Charge -->
                         <RelativeLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -201,8 +188,9 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/ride_charge"
-                                android:textColor="@color/textSecondary" />
+                                android:textColor="@color/textSecondary"/>
                             <TextView
+                                android:id="@+id/tv_ride_charge"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Rp 8.000"
@@ -210,71 +198,7 @@
                                 android:layout_alignParentEnd="true" />
                         </RelativeLayout>
 
-                        <!-- Row 2: Wallet Discount -->
-                        <RelativeLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="8dp">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/wallet_discount"
-                                android:textColor="@color/primaryGreen" />
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="- Rp 400"
-                                android:textStyle="bold"
-                                android:textColor="@color/primaryGreen"
-                                android:layout_alignParentEnd="true" />
-                        </RelativeLayout>
-
-                        <!-- Row 3: Discounted Charge -->
-                        <RelativeLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="8dp">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/discounted_charge"
-                                android:textColor="@color/textSecondary" />
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Rp 7.600"
-                                android:textColor="@color/textPrimary"
-                                android:layout_alignParentEnd="true" />
-                        </RelativeLayout>
-
-                        <RelativeLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/initial_hold"
-                                android:textColor="@color/textSecondary" />
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Rp 25.000"
-                                android:textColor="@color/textPrimary"
-                                android:layout_alignParentEnd="true" />
-                        </RelativeLayout>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/refunded_to_wallet"
-                            android:textColor="@color/primaryGreen"
-                            android:background="@drawable/chip_refunded"
-                            android:paddingStart="12dp"
-                            android:paddingEnd="12dp"
-                            android:paddingTop="6dp"
-                            android:paddingBottom="6dp"
-                            android:layout_marginTop="4dp" />
+                        <!-- ... (Tambahkan baris lain jika perlu, seperti diskon) ... -->
 
                         <View
                             android:layout_width="match_parent"
@@ -306,7 +230,7 @@
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
-                <!-- Payment Method Card -->
+                <!-- Kartu Metode Pembayaran -->
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -324,20 +248,22 @@
                             android:text="@string/payment_method"
                             android:textColor="@color/textSecondary" />
                         <TextView
+                            android:id="@+id/tv_payment_method"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/wallet_balance"
+                            android:text="Wallet Balance"
                             android:textColor="@color/textPrimary"
                             android:textStyle="bold"
                             android:layout_alignParentEnd="true" />
                     </RelativeLayout>
                 </androidx.cardview.widget.CardView>
 
-                <!-- Environmental Impact Card -->
+                <!-- Kartu Dampak Lingkungan -->
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp"
                     app:cardCornerRadius="20dp"
                     app:cardElevation="0dp">
 
@@ -354,8 +280,8 @@
                             android:text="@string/env_impact_title"
                             android:textColor="@color/white"
                             android:textStyle="bold"
-                            android:drawablePadding="8dp"
-                            app:drawableStartCompat="@drawable/ic_graph_white" />
+                            android:drawableStart="@drawable/ic_graph_white"
+                            android:drawablePadding="8dp" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -366,6 +292,7 @@
                             android:layout_marginTop="12dp" />
 
                         <TextView
+                            android:id="@+id/tv_co2_saved"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/env_impact_amount"
@@ -385,6 +312,6 @@
 
             </LinearLayout>
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
 </RelativeLayout>

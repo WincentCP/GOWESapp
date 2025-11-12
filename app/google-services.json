@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "83756705117",
+    "firebase_url": "https://smartbike-c6082-default-rtdb.firebaseio.com",
+    "project_id": "smartbike-c6082",
+    "storage_bucket": "smartbike-c6082.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:83756705117:android:005bf09d0556500e7a34b4",
+        "android_client_info": {
+          "package_name": "edu.uph.m23si1.gowesapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBsnASK_TbouLehb0SQtjW9vtkbJM_Fa8Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

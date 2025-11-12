@@ -4,10 +4,11 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.view.View;
-import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 public class SplashActivity extends AppCompatActivity {
 
@@ -16,35 +17,22 @@ public class SplashActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
 
-        // Find buttons
-        Button createAccountButton = findViewById(R.id.btn_create_account);
-        Button loginButton = findViewById(R.id.btn_login);
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
-        // Set click listener for Create Account
-        createAccountButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(SplashActivity.this, CreateAccountActivity.class));
-            }
-        });
+            // (Perbaikan Bug 1) - Periksa status login Firebase
+            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
 
-        // Set click listener for Login
-        loginButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(SplashActivity.this, LoginActivity.class));
+            Intent nextIntent;
+            if (currentUser != null) {
+                // Pengguna sudah login, langsung ke MainActivity
+                nextIntent = new Intent(SplashActivity.this, MainActivity.class);
+            } else {
+                // Pengguna baru atau belum login, mulai alur pendaftaran
+                nextIntent = new Intent(SplashActivity.this, CreateAccountActivity.class);
             }
-        });
 
-        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                // Start LoginActivity
-                Intent intent = new Intent(SplashActivity.this, LoginActivity.class);
-                startActivity(intent);
-                // Finish this activity so the user can't go back to it
-                finish();
-            }
-        }, 3000); // 3000 milliseconds = 3 second
+            startActivity(nextIntent);
+            finish();
+        }, 3000); // 3 detik delay
     }
 }
