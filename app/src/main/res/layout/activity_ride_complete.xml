@@ -66,10 +66,10 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Bagian Header Hijau -->
+            <!-- Bagian Header Hijau (Height increased to 300dp to fix overlap) -->
             <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="220dp"
+                android:layout_height="300dp"
                 android:background="@drawable/header_ride_complete"
                 android:padding="24dp">
 
@@ -79,7 +79,7 @@
                     android:layout_height="80dp"
                     android:src="@drawable/ic_check_circle_large_white"
                     android:layout_centerHorizontal="true"
-                    android:layout_marginTop="24dp"
+                    android:layout_marginTop="32dp"
                     android:contentDescription="Ride Complete Checkmark"/>
 
                 <TextView
@@ -102,8 +102,10 @@
                     android:textColor="@color/white"
                     android:alpha="0.9"
                     android:textSize="16sp"
+                    android:gravity="center"
                     android:layout_below="@id/tv_title"
-                    android:layout_centerHorizontal="true" />
+                    android:layout_centerHorizontal="true"
+                    android:layout_marginTop="8dp"/>
 
             </RelativeLayout>
 
@@ -113,7 +115,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp"
-                android:layout_marginTop="-40dp"> <!-- Tumpang tindih dengan header -->
+                android:layout_marginTop="-50dp"> <!-- Adjusted overlap -->
 
                 <!-- Kartu Detail Perjalanan -->
                 <androidx.cardview.widget.CardView
@@ -126,34 +128,70 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="16dp">
+                        android:padding="20dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Bike BIKE-832"
+                            android:text="Bike Rental"
                             android:textColor="@color/textPrimary"
                             android:textSize="18sp"
                             android:textStyle="bold"
                             android:drawableStart="@drawable/ic_electric_bike_orange"
-                            android:drawablePadding="8dp"/>
+                            android:drawablePadding="12dp"/>
 
-                        <TextView
-                            android:layout_width="wrap_content"
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="@string/ride_duration"
-                            android:textColor="@color/textSecondary"
-                            android:textSize="14sp"
-                            android:layout_marginTop="12dp" />
+                            android:orientation="horizontal"
+                            android:layout_marginTop="16dp"
+                            android:baselineAligned="false">
 
-                        <TextView
-                            android:id="@+id/tv_ride_duration"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="00:00:00"
-                            android:textColor="@color/textPrimary"
-                            android:textSize="22sp"
-                            android:textStyle="bold" />
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/ride_duration"
+                                    android:textColor="@color/textSecondary"
+                                    android:textSize="12sp"/>
+                                <TextView
+                                    android:id="@+id/tv_ride_duration"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="00:00:00"
+                                    android:textColor="@color/textPrimary"
+                                    android:textSize="20sp"
+                                    android:textStyle="bold"
+                                    android:layout_marginTop="4dp"/>
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:gravity="end">
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Total Cost"
+                                    android:textColor="@color/textSecondary"
+                                    android:textSize="12sp"/>
+                                <TextView
+                                    android:id="@+id/tv_amount_paid"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Rp 0"
+                                    android:textColor="@color/primaryOrange"
+                                    android:textSize="20sp"
+                                    android:textStyle="bold"
+                                    android:layout_marginTop="4dp"/>
+                            </LinearLayout>
+                        </LinearLayout>
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
@@ -169,7 +207,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="16dp">
+                        android:padding="20dp">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -178,7 +216,7 @@
                             android:textColor="@color/textPrimary"
                             android:textSize="16sp"
                             android:textStyle="bold"
-                            android:layout_marginBottom="12dp" />
+                            android:layout_marginBottom="16dp" />
 
                         <RelativeLayout
                             android:layout_width="match_parent"
@@ -193,19 +231,17 @@
                                 android:id="@+id/tv_ride_charge"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Rp 8.000"
+                                android:text="Rp 0"
                                 android:textColor="@color/textPrimary"
                                 android:layout_alignParentEnd="true" />
                         </RelativeLayout>
-
-                        <!-- ... (Tambahkan baris lain jika perlu, seperti diskon) ... -->
 
                         <View
                             android:layout_width="match_parent"
                             android:layout_height="1dp"
                             android:background="@color/dividerColor"
-                            android:layout_marginTop="16dp"
-                            android:layout_marginBottom="16dp" />
+                            android:layout_marginTop="12dp"
+                            android:layout_marginBottom="12dp" />
 
                         <RelativeLayout
                             android:layout_width="match_parent"
@@ -213,49 +249,18 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/amount_paid"
+                                android:text="Payment Method"
                                 android:textColor="@color/textPrimary"
-                                android:textSize="16sp"
                                 android:textStyle="bold" />
                             <TextView
-                                android:id="@+id/tv_amount_paid"
+                                android:id="@+id/tv_payment_method"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Rp 7.600"
-                                android:textColor="@color/textPrimary"
-                                android:textSize="18sp"
-                                android:textStyle="bold"
+                                android:text="Wallet"
+                                android:textColor="@color/textSecondary"
                                 android:layout_alignParentEnd="true" />
                         </RelativeLayout>
                     </LinearLayout>
-                </androidx.cardview.widget.CardView>
-
-                <!-- Kartu Metode Pembayaran -->
-                <androidx.cardview.widget.CardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="0dp">
-
-                    <RelativeLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:padding="16dp">
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/payment_method"
-                            android:textColor="@color/textSecondary" />
-                        <TextView
-                            android:id="@+id/tv_payment_method"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Wallet Balance"
-                            android:textColor="@color/textPrimary"
-                            android:textStyle="bold"
-                            android:layout_alignParentEnd="true" />
-                    </RelativeLayout>
                 </androidx.cardview.widget.CardView>
 
                 <!-- Kartu Dampak Lingkungan -->
@@ -274,38 +279,69 @@
                         android:padding="20dp"
                         android:orientation="vertical">
 
-                        <TextView
-                            android:layout_width="wrap_content"
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="@string/env_impact_title"
-                            android:textColor="@color/white"
-                            android:textStyle="bold"
-                            android:drawableStart="@drawable/ic_graph_white"
-                            android:drawablePadding="8dp" />
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/env_impact_subtitle"
-                            android:textColor="@color/white"
-                            android:alpha="0.9"
-                            android:layout_marginTop="12dp" />
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:src="@drawable/ic_graph_white"
+                                android:padding="8dp"
+                                android:background="#20FFFFFF"
+                                android:backgroundTint="#20FFFFFF"/>
 
-                        <TextView
-                            android:id="@+id/tv_co2_saved"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/env_impact_amount"
-                            android:textColor="@color/white"
-                            android:textSize="32sp"
-                            android:textStyle="bold" />
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:layout_marginStart="16dp">
 
-                        <TextView
-                            android:layout_width="wrap_content"
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/env_impact_title"
+                                    android:textColor="@color/white"
+                                    android:textStyle="bold"
+                                    android:textSize="16sp"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/env_impact_subtitle"
+                                    android:textColor="@color/white"
+                                    android:alpha="0.9"
+                                    android:textSize="12sp"/>
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="@string/env_impact_desc"
-                            android:textColor="@color/white"
-                            android:alpha="0.9" />
+                            android:orientation="horizontal"
+                            android:layout_marginTop="16dp"
+                            android:gravity="bottom">
+
+                            <TextView
+                                android:id="@+id/tv_co2_saved"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/env_impact_amount"
+                                android:textColor="@color/white"
+                                android:textSize="32sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="saved!"
+                                android:textColor="@color/white"
+                                android:layout_marginStart="8dp"
+                                android:layout_marginBottom="6dp"
+                                android:textStyle="bold"/>
+                        </LinearLayout>
 
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>

@@ -48,10 +48,12 @@
                     android:drawablePadding="8dp"
                     android:textSize="14sp" />
 
+                <!-- FIX: Added ID here so Java can update the balance -->
                 <TextView
+                    android:id="@+id/tv_wallet_balance_main"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Rp 150.000"
+                    android:text="Rp 0"
                     android:textColor="@color/white"
                     android:textSize="32sp"
                     android:textStyle="bold"

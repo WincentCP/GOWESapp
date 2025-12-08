@@ -30,7 +30,22 @@
         android:layout_height="wrap_content"
         android:columnCount="2">
 
+        <!-- Added IDs to preset buttons -->
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_amount_30k"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_columnWeight="1"
+            android:text="Rp 30.000"
+            android:textColor="@color/textPrimary"
+            android:backgroundTint="@color/white"
+            app:strokeColor="@color/dividerColor"
+            app:strokeWidth="1dp"
+            app:cornerRadius="16dp"
+            android:layout_margin="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_amount_50k"
             android:layout_width="0dp"
             android:layout_height="60dp"
             android:layout_columnWeight="1"
@@ -43,6 +58,7 @@
             android:layout_margin="8dp" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_amount_100k"
             android:layout_width="0dp"
             android:layout_height="60dp"
             android:layout_columnWeight="1"
@@ -55,22 +71,11 @@
             android:layout_margin="8dp" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_amount_200k"
             android:layout_width="0dp"
             android:layout_height="60dp"
             android:layout_columnWeight="1"
             android:text="Rp 200.000"
-            android:textColor="@color/textPrimary"
-            android:backgroundTint="@color/white"
-            app:strokeColor="@color/dividerColor"
-            app:strokeWidth="1dp"
-            app:cornerRadius="16dp"
-            android:layout_margin="8dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:layout_width="0dp"
-            android:layout_height="60dp"
-            android:layout_columnWeight="1"
-            android:text="Rp 500.000"
             android:textColor="@color/textPrimary"
             android:backgroundTint="@color/white"
             app:strokeColor="@color/dividerColor"

@@ -55,7 +55,6 @@ public class ConfirmRideActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
 
-        // Find all views
         payAsYouGoCard = findViewById(R.id.pay_as_you_go_card);
         useWalletCard = findViewById(R.id.use_wallet_card);
         radioPayAsYouGo = findViewById(R.id.radio_btn_payg);
@@ -66,42 +65,57 @@ public class ConfirmRideActivity extends AppCompatActivity {
         btnConfirm = findViewById(R.id.btn_confirm);
         btnLinkCard = findViewById(R.id.btn_link_card);
 
+        // Back Button Logic
+        ImageView ivBack = findViewById(R.id.iv_back);
+        if (ivBack != null) {
+            ivBack.setOnClickListener(v -> finish());
+        }
+
+        // 🔎 Log the bike passed from previous screen (optional, but useful)
+        String bikeId = getIntent().getStringExtra("BIKE_ID");
+        Log.d(TAG, "ConfirmRideActivity started with BIKE_ID = " + bikeId);
+
         // Click listeners
-        payAsYouGoCard.setOnClickListener(v -> {
-            isWalletSelected = false;
-            updatePaymentSelection();
-        });
+        if (payAsYouGoCard != null) {
+            payAsYouGoCard.setOnClickListener(v -> {
+                isWalletSelected = false;
+                updatePaymentSelection();
+            });
+        }
 
-        useWalletCard.setOnClickListener(v -> {
-            isWalletSelected = true;
-            updatePaymentSelection();
-        });
+        if (useWalletCard != null) {
+            useWalletCard.setOnClickListener(v -> {
+                isWalletSelected = true;
+                updatePaymentSelection();
+            });
+        }
 
-        btnLinkCard.setOnClickListener(v -> {
-            // (Perbaikan Bug 5)
-            Toast.makeText(this, "Membuka layar 'Tautkan Kartu'...", Toast.LENGTH_SHORT).show();
-            // TODO: Buka Activity untuk menautkan kartu
-            // Untuk demo, kita tautkan kartu di Firebase:
-            if (userId != null) {
-                db.collection("users").document(userId).update("isCardLinked", true);
-            }
-        });
+        if (btnLinkCard != null) {
+            btnLinkCard.setOnClickListener(v -> {
+                showLinkPaymentDialog();
+            });
+        }
 
-        btnConfirm.setOnClickListener(v -> {
-            if (isWalletSelected) {
-                if (walletBalance < INITIAL_HOLD_AMOUNT) {
-                    showInsufficientBalanceDialog();
+        // Button always responsive, logic inside
+        if (btnConfirm != null) {
+            btnConfirm.setOnClickListener(v -> {
+                if (isWalletSelected) {
+                    if (walletBalance < INITIAL_HOLD_AMOUNT) {
+                        showInsufficientBalanceDialog();
+                    } else {
+                        startRide();
+                    }
                 } else {
-                    startRide();
+                    // Card path
+                    if (isCardLinked) {
+                        startRide();
+                    } else {
+                        Toast.makeText(this, "Please link a payment card first", Toast.LENGTH_SHORT).show();
+                        showLinkPaymentDialog();
+                    }
                 }
-            } else {
-                if (isCardLinked) {
-                    startRide();
-                } else {
-                    Toast.makeText(this, "Silakan tautkan kartu terlebih dahulu", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
+            });
+        }
     }
 
     @Override
@@ -112,7 +126,8 @@ public class ConfirmRideActivity extends AppCompatActivity {
             userId = user.getUid();
             startUserListener(userId);
         } else {
-            finish(); // Pengguna tidak login, tutup aktivitas ini
+            Log.w(TAG, "No logged-in user, finishing ConfirmRideActivity");
+            finish();
         }
     }
 
@@ -120,12 +135,8 @@ public class ConfirmRideActivity extends AppCompatActivity {
         final DocumentReference userDocRef = db.collection("users").document(userId);
 
         userListener = userDocRef.addSnapshotListener((snapshot, e) -> {
-            if (e != null) {
-                Log.w(TAG, "Listen failed.", e);
-                return;
-            }
+            if (e != null) return;
             if (snapshot != null && snapshot.exists()) {
-                // (Perbaikan Bug 8) Ambil data asli dari Firestore
                 Number balanceNum = (Number) snapshot.get("walletBalance");
                 Boolean cardLinked = snapshot.getBoolean("isCardLinked");
 
@@ -146,75 +157,106 @@ public class ConfirmRideActivity extends AppCompatActivity {
     }
 
     private void updateUI() {
-        tvWalletBalance.setText("Saldo saat ini: " + formatCurrency(walletBalance));
-
-        if (isCardLinked) {
-            linkedCardDetails.setVisibility(View.VISIBLE);
-            linkCardPrompt.setVisibility(View.GONE);
-        } else {
-            linkedCardDetails.setVisibility(View.GONE);
-            linkCardPrompt.setVisibility(View.VISIBLE);
+        if (tvWalletBalance != null) {
+            tvWalletBalance.setText("Current balance: " + formatCurrency(walletBalance));
         }
 
-        // Default ke Pay As You Go jika kartu tertaut, jika tidak, default ke Dompet
-        isWalletSelected = !isCardLinked;
+        if (isCardLinked) {
+            if (payAsYouGoCard != null) payAsYouGoCard.setVisibility(View.VISIBLE);
+            if (linkedCardDetails != null) linkedCardDetails.setVisibility(View.VISIBLE);
+            if (linkCardPrompt != null) linkCardPrompt.setVisibility(View.GONE);
+        } else {
+            if (payAsYouGoCard != null) payAsYouGoCard.setVisibility(View.GONE);
+            isWalletSelected = true;
+        }
+
         updatePaymentSelection();
     }
 
-    // ... (Metode updatePaymentSelection() dan startRide() tidak berubah) ...
-
     private void updatePaymentSelection() {
         if (isWalletSelected) {
-            // Select Wallet
-            useWalletCard.setBackgroundResource(R.drawable.card_payment_selected);
-            radioUseWallet.setImageResource(R.drawable.ic_radio_button_checked);
-            // Unselect Pay-as-you-go
-            payAsYouGoCard.setBackgroundResource(R.drawable.card_payment_unselected);
-            radioPayAsYouGo.setImageResource(R.drawable.ic_radio_button_unchecked);
+            if (useWalletCard != null) {
+                useWalletCard.setBackgroundResource(R.drawable.card_payment_selected);
+            }
+            if (radioUseWallet != null) {
+                radioUseWallet.setImageResource(R.drawable.ic_radio_button_checked);
+            }
 
-            // Enable confirm button only if balance is sufficient
-            btnConfirm.setEnabled(walletBalance >= INITIAL_HOLD_AMOUNT);
+            if (payAsYouGoCard != null && payAsYouGoCard.getVisibility() == View.VISIBLE) {
+                payAsYouGoCard.setBackgroundResource(R.drawable.card_payment_unselected);
+            }
+            if (radioPayAsYouGo != null) {
+                radioPayAsYouGo.setImageResource(R.drawable.ic_radio_button_unchecked);
+            }
         } else {
-            // Select Pay-as-you-go
-            payAsYouGoCard.setBackgroundResource(R.drawable.card_payment_selected);
-            radioPayAsYouGo.setImageResource(R.drawable.ic_radio_button_checked);
-            // Unselect Wallet
-            useWalletCard.setBackgroundResource(R.drawable.card_payment_unselected);
-            radioUseWallet.setImageResource(R.drawable.ic_radio_button_unchecked);
+            if (payAsYouGoCard != null) {
+                payAsYouGoCard.setBackgroundResource(R.drawable.card_payment_selected);
+            }
+            if (radioPayAsYouGo != null) {
+                radioPayAsYouGo.setImageResource(R.drawable.ic_radio_button_checked);
+            }
 
-            // Enable confirm button only if card is linked
-            btnConfirm.setEnabled(isCardLinked);
+            if (useWalletCard != null) {
+                useWalletCard.setBackgroundResource(R.drawable.card_payment_unselected);
+            }
+            if (radioUseWallet != null) {
+                radioUseWallet.setImageResource(R.drawable.ic_radio_button_unchecked);
+            }
+        }
+
+        if (btnConfirm != null) {
+            btnConfirm.setEnabled(true);
+            btnConfirm.setAlpha(1.0f);
         }
     }
 
     private void startRide() {
-        // (Perbaikan Bug 3) Set perjalanan aktif di Firestore
         if (userId != null) {
             db.collection("users").document(userId).update("isActiveRide", true);
         }
-
         Intent intent = new Intent(ConfirmRideActivity.this, ActiveRideActivity.class);
         startActivity(intent);
         finish();
     }
 
-
     // --- DIALOGS ---
 
     private void showInsufficientBalanceDialog() {
-        // ... (Logika dialog tidak berubah) ...
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         dialog.setContentView(R.layout.dialog_insufficient_balance);
 
         Button topUpNow = dialog.findViewById(R.id.btn_top_up_now);
         Button maybeLater = dialog.findViewById(R.id.btn_maybe_later);
 
-        topUpNow.setOnClickListener(v -> {
+        if (topUpNow != null) topUpNow.setOnClickListener(v -> {
             dialog.dismiss();
-            showTopUpDialog(); // Open the next dialog
+            showTopUpDialog();
         });
 
-        maybeLater.setOnClickListener(v -> dialog.dismiss());
+        if (maybeLater != null) maybeLater.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
+    }
+
+    private void showLinkPaymentDialog() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        dialog.setContentView(R.layout.dialog_link_payment);
+
+        Button btnCancel = dialog.findViewById(R.id.btn_cancel);
+        Button btnLink = dialog.findViewById(R.id.btn_link);
+
+        if (btnCancel != null) btnCancel.setOnClickListener(v -> dialog.dismiss());
+        if (btnLink != null) {
+            btnLink.setOnClickListener(v -> {
+                if (userId != null) {
+                    db.collection("users").document(userId)
+                            .update("isCardLinked", true)
+                            .addOnSuccessListener(a -> {
+                                Toast.makeText(this, "Card Linked Successfully", Toast.LENGTH_SHORT).show();
+                                dialog.dismiss();
+                            });
+                }
+            });
+        }
         dialog.show();
     }
 
@@ -226,41 +268,64 @@ public class ConfirmRideActivity extends AppCompatActivity {
         Button btnTopUp = dialog.findViewById(R.id.btn_top_up);
         EditText etAmount = dialog.findViewById(R.id.et_amount);
 
-        // (Perbaikan Bug 9)
-        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        Button btn30k = dialog.findViewById(R.id.btn_amount_30k);
+        Button btn50k = dialog.findViewById(R.id.btn_amount_50k);
+        Button btn100k = dialog.findViewById(R.id.btn_amount_100k);
+        Button btn200k = dialog.findViewById(R.id.btn_amount_200k);
 
-        btnTopUp.setOnClickListener(v -> {
-            String amountStr = etAmount.getText().toString();
-            if (amountStr.isEmpty()) {
-                Toast.makeText(this, "Silakan masukkan jumlah", Toast.LENGTH_SHORT).show();
-                return;
+        View.OnClickListener presetListener = v -> {
+            Button b = (Button) v;
+            String text = b.getText().toString();
+            String amountStr = text.replaceAll("[^0-9]", "");
+            if (etAmount != null) {
+                etAmount.setText(amountStr);
+                etAmount.setSelection(etAmount.getText().length());
             }
+        };
 
-            int amount = Integer.parseInt(amountStr);
-            if (amount < MIN_TOP_UP_AMOUNT) {
-                Toast.makeText(this, "Minimum top-up adalah " + formatCurrency(MIN_TOP_UP_AMOUNT), Toast.LENGTH_SHORT).show();
-            } else {
-                // (Perbaikan Bug 9) Update saldo di Firebase
-                if (userId != null) {
-                    DocumentReference userDocRef = db.collection("users").document(userId);
-                    db.runTransaction(transaction -> {
-                        DocumentSnapshot snapshot = transaction.get(userDocRef);
-                        Number currentBalanceNum = (Number) snapshot.get("walletBalance");
-                        int currentBalance = (currentBalanceNum != null) ? currentBalanceNum.intValue() : 0;
-                        int newBalance = currentBalance + amount;
-                        transaction.update(userDocRef, "walletBalance", newBalance);
-                        return newBalance; // Mengembalikan saldo baru
-                    }).addOnSuccessListener(newBalance -> {
-                        Toast.makeText(this, "Top Up Berhasil! Saldo baru: " + formatCurrency((Integer) newBalance), Toast.LENGTH_SHORT).show();
-                        dialog.dismiss();
-                    }).addOnFailureListener(e -> {
-                        Toast.makeText(this, "Top Up Gagal: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    });
+        if (btn30k != null) btn30k.setOnClickListener(presetListener);
+        if (btn50k != null) btn50k.setOnClickListener(presetListener);
+        if (btn100k != null) btn100k.setOnClickListener(presetListener);
+        if (btn200k != null) btn200k.setOnClickListener(presetListener);
+
+        if (btnCancel != null) btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        if (btnTopUp != null) {
+            btnTopUp.setOnClickListener(v -> {
+                if (etAmount == null) return;
+                String amountStr = etAmount.getText().toString();
+                if (amountStr.isEmpty()) {
+                    Toast.makeText(this, "Please enter an amount", Toast.LENGTH_SHORT).show();
+                    return;
                 }
-            }
-        });
 
-        etAmount.setText(String.valueOf(MIN_TOP_UP_AMOUNT));
+                int amount;
+                try {
+                    amount = Integer.parseInt(amountStr);
+                } catch (NumberFormatException e) {
+                    return;
+                }
+
+                if (amount < MIN_TOP_UP_AMOUNT) {
+                    Toast.makeText(this, "Minimum top-up is " + formatCurrency(MIN_TOP_UP_AMOUNT), Toast.LENGTH_SHORT).show();
+                } else {
+                    if (userId != null) {
+                        DocumentReference userDocRef = db.collection("users").document(userId);
+                        db.runTransaction(transaction -> {
+                            DocumentSnapshot snapshot = transaction.get(userDocRef);
+                            Number currentBalanceNum = (Number) snapshot.get("walletBalance");
+                            int currentBalance = (currentBalanceNum != null) ? currentBalanceNum.intValue() : 0;
+                            int newBalance = currentBalance + amount;
+                            transaction.update(userDocRef, "walletBalance", newBalance);
+                            return newBalance;
+                        }).addOnSuccessListener(newBalance -> {
+                            Toast.makeText(this, "Top Up Successful!", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        });
+                    }
+                }
+            });
+        }
         dialog.show();
     }
 
