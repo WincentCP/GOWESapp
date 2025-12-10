@@ -43,6 +43,7 @@ public class ActiveRideActivity extends AppCompatActivity {
     private long timeInMilliseconds = 0;
     private String bikeModel = "Gowes Bike";
     private String bikeId = "BK-UNKNOWN";
+    private String slotKey; // Menyimpan ID Slot (misal "slot_1")
 
     private double finalCalculatedCost = 0.0;
     private String finalRideDuration;
@@ -51,7 +52,7 @@ public class ActiveRideActivity extends AppCompatActivity {
     private DatabaseReference rtDbRef;
     private String userId;
     private String paymentMethod = "Wallet";
-    private String currentRideDocId; // To hold "ride_123456"
+    private String currentRideDocId;
 
     private final ActivityResultLauncher<Intent> cameraResultLauncher =
             registerForActivityResult(
@@ -93,10 +94,19 @@ public class ActiveRideActivity extends AppCompatActivity {
             resumeRideState();
         }
 
+        // --- UPDATED LOGIC: TOMBOL PARK ---
         parkButton.setOnClickListener(v -> {
             timerHandler.removeCallbacks(timerRunnable);
             finalRideDuration = tvTimer.getText().toString();
-            showDetectingDialog();
+
+            // 1. STEP PERTAMA: BUKA SERVO (OPEN)
+            // Ini agar user bisa memasukkan sepeda ke dalam dock
+            if (slotKey != null) {
+                updateServo(slotKey, "OPEN");
+                Toast.makeText(this, "Station Unlocked! Please insert bike.", Toast.LENGTH_SHORT).show();
+            }
+
+            showDetectingDialog(); // Memulai proses detecting (delay 3 detik)
         });
 
         backHomeButton.setOnClickListener(v -> {
@@ -106,8 +116,17 @@ public class ActiveRideActivity extends AppCompatActivity {
         });
     }
 
+    // --- HELPER UNTUK UPDATE SERVO ---
+    private void updateServo(String slot, String status) {
+        DatabaseReference slotRef = FirebaseDatabase.getInstance("https://smartbike-c6082-default-rtdb.firebaseio.com/")
+                .getReference("stations/station_uph_medan/slots")
+                .child(slot);
+
+        // Kita hanya update status servo, status slot (Available) diupdate nanti saat finalisasi
+        slotRef.child("servoStatus").setValue(status);
+    }
+
     private void initializeNewRide() {
-        // 1. Get Data
         paymentMethod = getIntent().getStringExtra(RideCompleteActivity.EXTRA_PAYMENT_METHOD);
         if (paymentMethod == null) paymentMethod = "Wallet";
 
@@ -117,37 +136,37 @@ public class ActiveRideActivity extends AppCompatActivity {
         bikeId = getIntent().getStringExtra("BIKE_ID");
         if (bikeId == null) bikeId = bikeModel;
 
+        slotKey = getIntent().getStringExtra("SLOT_KEY");
+
         if(tvBikeName != null) tvBikeName.setText(bikeModel);
 
         startTime = System.currentTimeMillis();
-        currentRideDocId = "ride_" + startTime; // Generate Unique ID based on time
+        currentRideDocId = "ride_" + startTime;
 
-        // 2. CREATE RIDE DOCUMENT IN FIRESTORE (The Schema for any user)
         Map<String, Object> rideData = new HashMap<>();
         rideData.put("rideId", currentRideDocId);
         rideData.put("userId", userId);
         rideData.put("bikeId", bikeId);
+        rideData.put("slotKey", slotKey);
         rideData.put("status", "Active");
         rideData.put("startTime", startTime);
-        rideData.put("startStation", "UPH Medan Station"); // Default or Dynamic
+        rideData.put("startStation", "UPH Medan Station");
         rideData.put("initialCost", 0);
         rideData.put("paymentMethod", paymentMethod);
 
-        // Save to 'rides' collection
         db.collection("rides").document(currentRideDocId).set(rideData);
 
-        // 3. UPDATE USER STATE (Links user to this specific ride)
         Map<String, Object> userUpdates = new HashMap<>();
         userUpdates.put("isActiveRide", true);
         userUpdates.put("currentRideId", currentRideDocId);
 
         db.collection("users").document(userId).set(userUpdates, SetOptions.merge());
 
-        // 4. Update Realtime DB (Backup/Legacy)
-        rtDbRef = FirebaseDatabase.getInstance().getReference("activeRides").child(userId);
+        rtDbRef = FirebaseDatabase.getInstance("https://smartbike-c6082-default-rtdb.firebaseio.com/").getReference("activeRides").child(userId);
         rtDbRef.child("isActive").setValue(true);
         rtDbRef.child("startTime").setValue(startTime);
         rtDbRef.child("bikeModel").setValue(bikeModel);
+        if (slotKey != null) rtDbRef.child("slotKey").setValue(slotKey);
 
         saveLocalState();
         startTimer();
@@ -158,15 +177,12 @@ public class ActiveRideActivity extends AppCompatActivity {
         startTime = prefs.getLong("ride_start_time", 0);
         bikeModel = prefs.getString("active_bike_model", "Gowes Electric Bike");
         paymentMethod = prefs.getString("active_payment_method", "Wallet");
+        slotKey = prefs.getString("active_slot_key", null);
 
         if (startTime == 0) {
-            // Fetch from Firestore if local data lost
             db.collection("users").document(userId).get().addOnSuccessListener(snapshot -> {
                 if (snapshot.exists() && Boolean.TRUE.equals(snapshot.getBoolean("isActiveRide"))) {
-                    // Get the ID of the ride to resume
                     currentRideDocId = snapshot.getString("currentRideId");
-                    // Ideally fetch startTime from the 'rides' collection using currentRideDocId
-                    // For simplicity, we restart if fails, but in prod fetch the doc.
                     startTime = System.currentTimeMillis();
                     startTimer();
                 } else {
@@ -185,6 +201,7 @@ public class ActiveRideActivity extends AppCompatActivity {
         editor.putLong("ride_start_time", startTime);
         editor.putString("active_bike_model", bikeModel);
         editor.putString("active_payment_method", paymentMethod);
+        editor.putString("active_slot_key", slotKey);
         editor.apply();
     }
 
@@ -232,9 +249,19 @@ public class ActiveRideActivity extends AppCompatActivity {
             });
         }
         dialog.show();
+
+        // --- LOGIKA DELAY 3 DETIK ---
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             if (dialog.isShowing()) {
                 dialog.dismiss();
+
+                // 2. STEP KEDUA: TUTUP SERVO (LOCKED)
+                // Setelah 3 detik (waktu user memasukkan sepeda), kita kunci servo
+                if (slotKey != null) {
+                    updateServo(slotKey, "LOCKED");
+                    Toast.makeText(this, "Bike Locked Successfully!", Toast.LENGTH_SHORT).show();
+                }
+
                 showBikeDetectedDialog();
             }
         }, 3000);
@@ -262,20 +289,31 @@ public class ActiveRideActivity extends AppCompatActivity {
     }
 
     private void endRide() {
-        // 1. Update Firestore User
+        // Redundansi: Pastikan servo terkunci dan status slot diperbarui jadi Available
+        if (slotKey != null && !slotKey.isEmpty()) {
+            DatabaseReference slotRef = FirebaseDatabase.getInstance("https://smartbike-c6082-default-rtdb.firebaseio.com/")
+                    .getReference("stations/station_uph_medan/slots")
+                    .child(slotKey);
+
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("servoStatus", "LOCKED"); // Pastikan terkunci
+            updates.put("status", "Available");   // Ubah jadi Hijau di Home
+
+            slotRef.updateChildren(updates);
+        }
+
         Map<String, Object> updates = new HashMap<>();
         updates.put("isActiveRide", false);
         updates.put("currentRideId", null);
         db.collection("users").document(userId).update(updates);
 
-        // 2. Update Ride Document Status
-        // If we don't have currentRideDocId in memory (e.g. app restart), we should fetch it.
-        // Assuming normal flow for now.
         if (currentRideDocId == null) currentRideDocId = "ride_" + startTime;
         db.collection("rides").document(currentRideDocId).update("status", "Completed");
 
-        // 3. Clear Realtime DB & Local
-        if (rtDbRef == null) rtDbRef = FirebaseDatabase.getInstance().getReference("activeRides").child(userId);
+        if (rtDbRef == null) {
+            rtDbRef = FirebaseDatabase.getInstance("https://smartbike-c6082-default-rtdb.firebaseio.com/")
+                    .getReference("activeRides").child(userId);
+        }
         rtDbRef.removeValue();
 
         SharedPreferences prefs = getSharedPreferences("GowesAppPrefs", Context.MODE_PRIVATE);

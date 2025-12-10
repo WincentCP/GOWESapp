@@ -23,7 +23,6 @@ public class MainActivity extends AppCompatActivity {
     private BottomNavigationView bottomNavigationView;
     private FloatingActionButton fabScan;
 
-    // Add Firebase instances
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
 
@@ -32,19 +31,16 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Initialize Firebase
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
 
         bottomNavigationView = findViewById(R.id.bottom_navigation_view);
         fabScan = findViewById(R.id.fab_scan);
 
-        // Set the default fragment to Home
         if (savedInstanceState == null) {
             replaceFragment(new HomeFragment());
         }
 
-        // Handle bottom navigation item selection
         bottomNavigationView.setOnItemSelectedListener(new BottomNavigationView.OnItemSelectedListener() {
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem item) {
@@ -67,10 +63,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // UPDATED: Handle Scan FAB click with "Active Ride" Check
         fabScan.setOnClickListener(v -> checkActiveRideAndScan());
 
-        // This is a small trick to make the "Scan" placeholder in the menu un-selectable
         View placeholderItem = findViewById(R.id.nav_placeholder);
         if (placeholderItem != null) {
             placeholderItem.setClickable(false);
@@ -81,26 +75,20 @@ public class MainActivity extends AppCompatActivity {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null) return;
 
-        // Check Firestore to see if user is already riding
         db.collection("users").document(user.getUid()).get()
                 .addOnSuccessListener(snapshot -> {
                     if (snapshot.exists()) {
                         Boolean isActive = snapshot.getBoolean("isActiveRide");
 
                         if (Boolean.TRUE.equals(isActive)) {
-                            // 🛑 BLOCK: User has an active ride
                             Toast.makeText(MainActivity.this, "You have an ongoing ride!", Toast.LENGTH_SHORT).show();
-
-                            // Redirect to Active Ride page to Resume
                             Intent intent = new Intent(MainActivity.this, ActiveRideActivity.class);
-                            intent.putExtra("IS_NEW_RIDE", false); // Not new, it's a resume
+                            intent.putExtra("IS_NEW_RIDE", false);
                             startActivity(intent);
                         } else {
-                            // ✅ ALLOW: Open Scanner
                             startActivity(new Intent(MainActivity.this, ScanQrActivity.class));
                         }
                     } else {
-                        // Safe fallback if user doc missing
                         startActivity(new Intent(MainActivity.this, ScanQrActivity.class));
                     }
                 })
@@ -109,7 +97,6 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
-    // Helper method to replace the fragment in the container
     private void replaceFragment(Fragment fragment) {
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();

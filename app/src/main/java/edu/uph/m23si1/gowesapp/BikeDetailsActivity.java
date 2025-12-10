@@ -2,9 +2,7 @@ package edu.uph.m23si1.gowesapp;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.RadioGroup;
@@ -44,9 +42,8 @@ public class BikeDetailsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bike_details);
 
-        // 1. Inisialisasi Firebase (Gunakan URL jika perlu, atau default)
+        // 1. Inisialisasi Firebase
         try {
-            // Ganti URL ini dengan URL database Anda sendiri jika getInstance() default gagal
             FirebaseDatabase database = FirebaseDatabase.getInstance("https://smartbike-c6082-default-rtdb.firebaseio.com/");
             slotsRef = database.getReference("stations")
                     .child("station_uph_medan")
@@ -70,7 +67,7 @@ public class BikeDetailsActivity extends AppCompatActivity {
         // 4. Listener RadioGroup (Memilih Slot & Mulai Listening Statusnya)
         rgBikeSelection.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.rb_bike_001) {
-                selectSlot("BK-001", "slot_1", 88, 45); // Baterai/Range masih dummy, bisa diambil dr DB juga nanti
+                selectSlot("BK-001", "slot_1", 88, 45);
             } else if (checkedId == R.id.rb_bike_002) {
                 selectSlot("BK-002", "slot_2", 92, 50);
             } else if (checkedId == R.id.rb_bike_003) {
@@ -80,45 +77,38 @@ public class BikeDetailsActivity extends AppCompatActivity {
             }
         });
 
-        // 5. Listener Tombol Rent (Buka Servo)
+        // 5. Listener Tombol Rent
         btnRentBike.setOnClickListener(v -> {
             if (currentSlotKey != null) {
-                openServoForSlot(currentSlotKey);
+                // REVISI: Langsung ke ConfirmRideActivity, JANGAN buka servo dulu!
+                goToConfirmRide();
             } else {
                 Toast.makeText(this, "Pilih sepeda terlebih dahulu", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    /**
-     * Fungsi ini dipanggil saat user memilih RadioButton.
-     * Tugasnya: Memasang pendengar (Listener) ke path Firebase slot tersebut.
-     */
     private void selectSlot(String bikeId, String slotKey, int defaultBat, int defaultRange) {
         this.selectedBikeId = bikeId;
 
-        // Hapus listener lama jika ada (supaya tidak numpuk/bentrok)
+        // Hapus listener lama
         if (currentSlotKey != null && slotStatusListener != null) {
             slotsRef.child(currentSlotKey).removeEventListener(slotStatusListener);
         }
 
         this.currentSlotKey = slotKey;
 
-        // Set info statis (Baterai/Range bisa dibuat realtime nanti jika ada datanya di DB)
+        // Set info statis
         tvBatteryLevel.setText(defaultBat + "%");
         tvRange.setText(defaultRange + " km");
-        tvStatus.setText("Loading..."); // Tanda sedang ambil data
+        tvStatus.setText("Loading...");
 
-        // --- REALTIME LISTENER ---
+        // Realtime Listener
         slotStatusListener = new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                // Ambil status dari path: slots/slot_X/status
-                // Arduino akan update ini jadi "Available" atau "In Use"
                 String status = snapshot.child("status").getValue(String.class);
-
-                if (status == null) status = "Unknown"; // Default jika data kosong
-
+                if (status == null) status = "Unknown";
                 updateUIStatus(status);
             }
 
@@ -129,24 +119,18 @@ public class BikeDetailsActivity extends AppCompatActivity {
             }
         };
 
-        // Pasang listener ke slot yang dipilih
         slotsRef.child(slotKey).addValueEventListener(slotStatusListener);
     }
 
-    /**
-     * Update UI (Warna teks & Enable/Disable Tombol) berdasarkan status Firebase
-     */
     private void updateUIStatus(String status) {
         tvStatus.setText(status);
 
         if ("Available".equalsIgnoreCase(status)) {
-            // HIJAU & BISA DISEWA
             tvStatus.setTextColor(ContextCompat.getColor(this, R.color.primaryOrange));
             btnRentBike.setEnabled(true);
             btnRentBike.setAlpha(1.0f);
             btnRentBike.setText("Proceed to Payment");
         } else {
-            // ABU-ABU & TOMBOL MATI (Sedang dipakai / Sensor tidak mendeteksi sepeda)
             tvStatus.setTextColor(ContextCompat.getColor(this, android.R.color.darker_gray));
             btnRentBike.setEnabled(false);
             btnRentBike.setAlpha(0.5f);
@@ -154,44 +138,16 @@ public class BikeDetailsActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Mengirim perintah BUKA ke Firebase
-     */
-    private void openServoForSlot(String slotKey) {
-        btnRentBike.setEnabled(false);
-        btnRentBike.setText("Unlocking...");
-
-        // Tulis "OPEN" ke path servoStatus
-        slotsRef.child(slotKey).child("servoStatus").setValue("OPEN")
-                .addOnSuccessListener(aVoid -> {
-                    Log.d(TAG, "Request OPEN terkirim ke " + slotKey);
-                    Toast.makeText(BikeDetailsActivity.this, "Payment Success! Unlocking...", Toast.LENGTH_SHORT).show();
-
-                    // Delay untuk simulasi, lalu pindah halaman
-                    new Handler().postDelayed(() -> {
-                        goToActiveRide();
-                    }, 2000);
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Gagal kirim perintah", e);
-                    Toast.makeText(BikeDetailsActivity.this, "Connection Failed", Toast.LENGTH_SHORT).show();
-                    // Kembalikan tombol ke state awal (baca ulang status terakhir dari textview)
-                    updateUIStatus(tvStatus.getText().toString());
-                });
-    }
-
-    private void goToActiveRide() {
-        // Hapus listener sebelum pindah agar memori aman
+    // Fungsi navigasi ke halaman Konfirmasi
+    private void goToConfirmRide() {
+        // Bersihkan listener memori
         if (currentSlotKey != null && slotStatusListener != null) {
             slotsRef.child(currentSlotKey).removeEventListener(slotStatusListener);
         }
 
-        Intent intent = new Intent(BikeDetailsActivity.this, ActiveRideActivity.class);
-        intent.putExtra("IS_NEW_RIDE", true);
-        intent.putExtra("BIKE_MODEL", selectedBikeId);
-        intent.putExtra(RideCompleteActivity.EXTRA_PAYMENT_METHOD, "Wallet");
-
+        Intent intent = new Intent(BikeDetailsActivity.this, ConfirmRideActivity.class);
+        intent.putExtra("BIKE_ID", selectedBikeId); // Kirim ID Sepeda
+        intent.putExtra("SLOT_KEY", currentSlotKey); // Kirim Kunci Slot (Penting untuk IoT nanti)
         startActivity(intent);
-        finish();
     }
 }

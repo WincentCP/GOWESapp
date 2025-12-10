@@ -33,7 +33,6 @@ public class ProfileFragment extends Fragment {
         tvUserName = view.findViewById(R.id.tv_user_name);
         tvUserPhone = view.findViewById(R.id.tv_user_phone);
 
-        // Logout logic
         View btnLogout = view.findViewById(R.id.btn_logout);
         if(btnLogout != null) {
             btnLogout.setOnClickListener(v -> {
@@ -59,13 +58,12 @@ public class ProfileFragment extends Fragment {
                 .addSnapshotListener((snapshot, e) -> {
                     if (e != null) return;
                     if (snapshot != null && snapshot.exists()) {
-                        // Profile Info
                         String name = snapshot.getString("fullName");
                         String phone = snapshot.getString("phone");
                         tvUserName.setText(name != null ? name : "User");
                         tvUserPhone.setText(phone != null ? phone : "-");
 
-                        // Stats Sync (Same logic as RidesFragment)
+                        // FIX: Ensure Stats sync properly
                         Double rides = snapshot.getDouble("stats.totalRides");
                         Double co2 = snapshot.getDouble("stats.totalCO2Saved");
 

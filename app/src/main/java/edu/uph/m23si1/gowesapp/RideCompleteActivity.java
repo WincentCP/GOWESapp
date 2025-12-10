@@ -2,9 +2,10 @@ package edu.uph.m23si1.gowesapp;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import android.util.Log;
+import android.widget.RelativeLayout;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -24,6 +25,11 @@ public class RideCompleteActivity extends AppCompatActivity {
 
     private TextView tvSubtitle, tvBikeName;
     private TextView tvRideDuration, tvAmountPaid, tvRideCharge, tvPaymentMethod, tvCo2Saved;
+
+    // FIXED: Discount row type MUST be RelativeLayout (matching XML)
+    private RelativeLayout layoutDiscountRow;
+    private TextView tvDiscountAmount;
+
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
 
@@ -51,6 +57,11 @@ public class RideCompleteActivity extends AppCompatActivity {
         tvRideCharge    = findViewById(R.id.tv_ride_charge);
         tvPaymentMethod = findViewById(R.id.tv_payment_method);
         tvCo2Saved      = findViewById(R.id.tv_co2_saved);
+
+        // FIX: correct type (RelativeLayout)
+        layoutDiscountRow = findViewById(R.id.layout_discount_row);
+        tvDiscountAmount = findViewById(R.id.tv_discount_amount);
+
         Button btnBackHome = findViewById(R.id.btn_back_home);
 
         fetchUserName();
@@ -59,14 +70,12 @@ public class RideCompleteActivity extends AppCompatActivity {
             populateRideDataAndProcessTransaction();
         }
 
-        if (btnBackHome != null) {
-            btnBackHome.setOnClickListener(v -> {
-                Intent intent = new Intent(RideCompleteActivity.this, MainActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                finish();
-            });
-        }
+        btnBackHome.setOnClickListener(v -> {
+            Intent intent = new Intent(RideCompleteActivity.this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+        });
     }
 
     private void fetchUserName() {
@@ -76,7 +85,9 @@ public class RideCompleteActivity extends AppCompatActivity {
                     .addOnSuccessListener(snap -> {
                         if (snap.exists()) {
                             String name = snap.getString("fullName");
-                            if (name != null) tvSubtitle.setText("Thank you, " + name.split(" ")[0] + "! Stay Safe");
+                            if (name != null) {
+                                tvSubtitle.setText("Thank you, " + name.split(" ")[0] + "! Stay Safe");
+                            }
                         }
                     });
         }
@@ -92,21 +103,27 @@ public class RideCompleteActivity extends AppCompatActivity {
         String bikeId = intent.getStringExtra(EXTRA_BIKE_ID);
         double co2Grams = intent.getDoubleExtra(EXTRA_CO2_SAVED, 0.0);
 
-        // Discount Logic
+        // Discount
         double discountRate = paymentMethod.equalsIgnoreCase("Wallet") ? 0.05 : 0.0;
         int discountAmount = (int) Math.round(baseCharge * discountRate);
         int finalCharge = baseCharge - discountAmount;
 
-        // UI Updates
-        if (tvRideDuration != null) tvRideDuration.setText(formatDuration(durationMs));
-        if (tvBikeName != null) tvBikeName.setText(bikeId != null ? bikeId : "Bike Rental");
-        if (tvRideCharge != null) tvRideCharge.setText(formatCurrency(baseCharge));
-        if (tvAmountPaid != null) tvAmountPaid.setText(formatCurrency(finalCharge));
-        if (tvPaymentMethod != null) tvPaymentMethod.setText(discountRate > 0 ? paymentMethod + " (-5%)" : paymentMethod);
-        if (tvCo2Saved != null) tvCo2Saved.setText(String.format(Locale.getDefault(), "%.0fg", co2Grams));
+        // UI
+        tvRideDuration.setText(formatDuration(durationMs));
+        tvBikeName.setText(bikeId != null ? bikeId : "Bike Rental");
+        tvRideCharge.setText(formatCurrency(baseCharge));
+        tvAmountPaid.setText(formatCurrency(finalCharge));
+        tvPaymentMethod.setText(paymentMethod);
+        tvCo2Saved.setText(String.format(Locale.getDefault(), "%.0fg", co2Grams));
 
-        // PROCESS TRANSACTION (Deduct & Save Stats)
-        if (!isTransactionProcessed && paymentMethod.equalsIgnoreCase("Wallet")) {
+        if (discountAmount > 0) {
+            layoutDiscountRow.setVisibility(View.VISIBLE);
+            tvDiscountAmount.setText("-" + formatCurrency(discountAmount));
+        } else {
+            layoutDiscountRow.setVisibility(View.GONE);
+        }
+
+        if (!isTransactionProcessed) {
             processPaymentAndStats(finalCharge, bikeId, co2Grams);
             isTransactionProcessed = true;
         }
@@ -118,33 +135,41 @@ public class RideCompleteActivity extends AppCompatActivity {
 
         DocumentReference userRef = db.collection("users").document(user.getUid());
 
-        // 1. Deduct Balance
+        // Deduct wallet
         userRef.update("walletBalance", FieldValue.increment(-amount));
 
-        // 2. Update Stats (Total Rides & CO2)
-        // We use dot notation to update nested fields.
-        // Important: "stats" map must exist (HomeFragment seeder ensures this now)
+        // Stats
         double co2Kg = co2Grams / 1000.0;
+
         userRef.update(
                 "stats.totalRides", FieldValue.increment(1),
                 "stats.totalCO2Saved", FieldValue.increment(co2Kg)
         ).addOnFailureListener(e -> {
-            // Fallback: If stats field missing, creating it entirely
             Map<String, Object> newStats = new HashMap<>();
             newStats.put("totalRides", 1);
             newStats.put("totalCO2Saved", co2Kg);
             userRef.set(Map.of("stats", newStats), SetOptions.merge());
         });
 
-        // 3. Save Transaction History
+        // Wallet Transaction
         Map<String, Object> txn = new HashMap<>();
         txn.put("amount", -amount);
-        txn.put("description", "Ride Payment - " + (bikeId != null ? bikeId : "Bike"));
+        txn.put("description", "Ride - " + (bikeId != null ? bikeId : "Bike"));
         txn.put("timestamp", System.currentTimeMillis());
         txn.put("type", "RidePayment");
         txn.put("status", "Success");
 
         userRef.collection("transactions").add(txn);
+
+        // Ride history
+        Map<String, Object> rideHistoryItem = new HashMap<>();
+        rideHistoryItem.put("bikeId", bikeId);
+        rideHistoryItem.put("timestamp", System.currentTimeMillis());
+        rideHistoryItem.put("cost", amount);
+        rideHistoryItem.put("duration", tvRideDuration.getText().toString());
+        rideHistoryItem.put("startStation", "UPH Medan Station");
+
+        userRef.collection("rideHistory").add(rideHistoryItem);
     }
 
     private String formatDuration(long durationMs) {

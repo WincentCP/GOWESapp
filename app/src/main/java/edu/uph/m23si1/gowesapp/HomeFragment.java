@@ -14,10 +14,11 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.cardview.widget.CardView;
-import androidx.fragment.app.Fragment;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.button.MaterialButton; // Tambahkan import ini
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -55,7 +56,7 @@ public class HomeFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.activity_home, container, false);
+        View view = inflater.inflate(R.layout.fragment_home, container, false);
 
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
@@ -104,7 +105,7 @@ public class HomeFragment extends Fragment {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 int count = 0;
-                long totalSlots = snapshot.getChildrenCount(); // Menghitung total slot (misal: 4)
+                long totalSlots = snapshot.getChildrenCount();
 
                 for (DataSnapshot slot : snapshot.getChildren()) {
                     String status = slot.child("status").getValue(String.class);
@@ -117,26 +118,19 @@ public class HomeFragment extends Fragment {
                     tvAvailableBikesCount.setText(String.valueOf(count));
                 }
 
-                // --- UPDATED LOGIC ---
                 if (tvBikeStatus != null && getContext() != null) {
                     if (count == 0) {
-                        // KOSONG
                         tvBikeStatus.setText("● No bikes available");
                         tvBikeStatus.setTextColor(ContextCompat.getColor(getContext(), android.R.color.holo_red_dark));
                     } else if (count == totalSlots && totalSlots > 0) {
-                        // SEMUA TERSEDIA (Full)
                         tvBikeStatus.setText("● All bikes ready to ride");
                         tvBikeStatus.setTextColor(ContextCompat.getColor(getContext(), R.color.primaryGreen));
                     } else {
-                        // ADA SEBAGIAN (1, 2, 3...)
-                        String text;
-                        if (count == 1) {
-                            text = "● 1 bike available";
-                        } else {
-                            text = "● " + count + " bikes available";
-                        }
+                        String text = (count == 1)
+                                ? "● 1 bike available"
+                                : "● " + count + " bikes available";
+
                         tvBikeStatus.setText(text);
-                        // Tetap warna hijau karena masih tersedia
                         tvBikeStatus.setTextColor(ContextCompat.getColor(getContext(), R.color.primaryGreen));
                     }
                 }
@@ -168,6 +162,7 @@ public class HomeFragment extends Fragment {
                     slotsRef.updateChildren(updates);
                 }
             }
+
             @Override
             public void onCancelled(@NonNull DatabaseError error) {}
         });
@@ -191,25 +186,30 @@ public class HomeFragment extends Fragment {
                 newUser.put("stats", stats);
 
                 userDoc.set(newUser);
-            } else {
-                if (snapshot.get("stats") == null) {
-                    Map<String, Object> stats = new HashMap<>();
-                    stats.put("totalRides", 0);
-                    stats.put("totalCO2Saved", 0.0);
-                    userDoc.update("stats", stats);
-                }
             }
         });
     }
 
+    // =============================
+    //        FIXED DIALOG
+    // =============================
     private void showTopUpDialog() {
         if (getContext() == null) return;
-        BottomSheetDialog dialog = new BottomSheetDialog(getContext());
-        dialog.setContentView(R.layout.dialog_top_up_balance);
 
-        Button btnCancel = dialog.findViewById(R.id.btn_cancel);
-        Button btnTopUp = dialog.findViewById(R.id.btn_top_up);
-        EditText etAmount = dialog.findViewById(R.id.et_amount);
+        // FIX: Removed R.style.BottomSheetDialogTheme to fix build error.
+        // If you need the custom theme, ensure it is defined in res/values/themes.xml first.
+        BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
+        View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_top_up_balance, null);
+        dialog.setContentView(dialogView);
+
+        dialogView.setClickable(true);
+        dialogView.setFocusableInTouchMode(true);
+
+        Button btnCancel = dialogView.findViewById(R.id.btn_cancel);
+
+        // --- FIX: Mengganti R.id.btn_top_up menjadi R.id.btn_pay_now sesuai XML ---
+        Button btnTopUp = dialogView.findViewById(R.id.btn_pay_now);
+        EditText etAmount = dialogView.findViewById(R.id.et_amount);
 
         View.OnClickListener presetListener = v -> {
             if (etAmount != null && v instanceof Button) {
@@ -219,25 +219,49 @@ public class HomeFragment extends Fragment {
                 etAmount.setSelection(etAmount.getText().length());
             }
         };
-        int[] presetIds = {R.id.btn_amount_30k, R.id.btn_amount_50k, R.id.btn_amount_100k, R.id.btn_amount_200k};
+
+        int[] presetIds = {
+                R.id.btn_amount_30k,
+                R.id.btn_amount_50k,
+                R.id.btn_amount_100k,
+                R.id.btn_amount_200k
+        };
+
         for (int id : presetIds) {
-            View btn = dialog.findViewById(id);
+            View btn = dialogView.findViewById(id);
             if (btn != null) btn.setOnClickListener(presetListener);
         }
 
-        if (btnCancel != null) btnCancel.setOnClickListener(v -> dialog.dismiss());
-        if (btnTopUp != null && etAmount != null) {
+        if (btnCancel != null) {
+            btnCancel.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        // Logic Top Up
+        if (btnTopUp != null) {
             btnTopUp.setOnClickListener(v -> {
                 String amountStr = etAmount.getText().toString().trim();
-                if (amountStr.isEmpty()) return;
-                int amount = Integer.parseInt(amountStr);
-                if (amount < MIN_TOP_UP_AMOUNT) {
-                    Toast.makeText(getContext(), "Min Rp 30.000", Toast.LENGTH_SHORT).show();
-                } else {
-                    processTopUp(amount, dialog);
+
+                if (amountStr.isEmpty()) {
+                    Toast.makeText(getContext(), "Please enter amount", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                try {
+                    int amount = Integer.parseInt(amountStr);
+                    if (amount < MIN_TOP_UP_AMOUNT) {
+                        Toast.makeText(getContext(), "Min Top Up Rp 30.000", Toast.LENGTH_SHORT).show();
+                    } else {
+                        processTopUp(amount, dialog);
+                    }
+                } catch (NumberFormatException e) {
+                    Toast.makeText(getContext(), "Invalid amount", Toast.LENGTH_SHORT).show();
                 }
             });
+        } else {
+            // Debugging log jika button masih null (seharusnya tidak null lagi)
+            Log.e(TAG, "Button Top Up (btn_pay_now) not found in dialog layout!");
         }
+
         dialog.show();
     }
 
@@ -249,17 +273,22 @@ public class HomeFragment extends Fragment {
 
         userRef.update("walletBalance", com.google.firebase.firestore.FieldValue.increment(amount))
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(getContext(), "Top Up Success!", Toast.LENGTH_SHORT).show();
+                    if (getContext() != null) {
+                        Toast.makeText(getContext(), "Top Up Success!", Toast.LENGTH_SHORT).show();
+                    }
                     dialog.dismiss();
+
                     Map<String, Object> txn = new HashMap<>();
                     txn.put("amount", amount);
                     txn.put("description", "Top Up Wallet");
                     txn.put("type", "TopUp");
                     txn.put("status", "Success");
                     txn.put("timestamp", System.currentTimeMillis());
+
                     userRef.collection("transactions").add(txn);
                 })
                 .addOnFailureListener(e -> {
+                    // Jika user baru dan field belum ada, set manual
                     Map<String, Object> data = new HashMap<>();
                     data.put("walletBalance", amount);
                     userRef.set(data, SetOptions.merge()).addOnSuccessListener(v -> dialog.dismiss());
@@ -283,10 +312,12 @@ public class HomeFragment extends Fragment {
             if (e != null || snapshot == null || !snapshot.exists()) return;
 
             String fullName = snapshot.getString("fullName");
-            if (fullName != null && !fullName.isEmpty()) tvUserName.setText(fullName.split(" ")[0]);
+            if (fullName != null && !fullName.isEmpty())
+                tvUserName.setText(fullName.split(" ")[0]);
 
             Number balance = (Number) snapshot.get("walletBalance");
-            if (tvWalletBalance != null) tvWalletBalance.setText(formatCurrency(balance != null ? balance.intValue() : 0));
+            if (tvWalletBalance != null)
+                tvWalletBalance.setText(formatCurrency(balance != null ? balance.intValue() : 0));
 
             Boolean isActive = snapshot.getBoolean("isActiveRide");
             activeRideBanner.setVisibility(Boolean.TRUE.equals(isActive) ? View.VISIBLE : View.GONE);
@@ -298,10 +329,12 @@ public class HomeFragment extends Fragment {
             double totalCo2Val = (co2 != null) ? co2.doubleValue() : 0.0;
 
             if (tvTotalRides != null) tvTotalRides.setText(String.valueOf(totalRidesVal));
-            if (tvCo2Saved != null) tvCo2Saved.setText(String.format(Locale.getDefault(), "%.1fkg", totalCo2Val));
+            if (tvCo2Saved != null)
+                tvCo2Saved.setText(String.format(Locale.getDefault(), "%.1fkg", totalCo2Val));
 
             double hours = totalRidesVal * 0.33;
-            if (tvTimeSaved != null) tvTimeSaved.setText(String.format(Locale.getDefault(), "%.1fh", hours));
+            if (tvTimeSaved != null)
+                tvTimeSaved.setText(String.format(Locale.getDefault(), "%.1fh", hours));
         });
     }
 

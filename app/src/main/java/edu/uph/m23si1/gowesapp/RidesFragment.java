@@ -70,10 +70,11 @@ public class RidesFragment extends Fragment {
             });
         }
 
-        // Optional: Klik View All untuk melihat history lengkap
+        // FIX: Navigate to RideHistoryActivity
         if (tvViewAll != null) {
             tvViewAll.setOnClickListener(v -> {
-                Toast.makeText(getContext(), "View All clicked", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(getContext(), RideHistoryActivity.class);
+                startActivity(intent);
             });
         }
 
@@ -110,8 +111,6 @@ public class RidesFragment extends Fragment {
     }
 
     private void loadRecentRides(String userId) {
-        // PERBAIKAN: Kembali ke path users -> rideHistory.
-        // Jika data sewa tidak muncul, pastikan dokumen di Firestore memiliki field 'timestamp'.
         Query query = db.collection("users").document(userId).collection("rideHistory")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .limit(5);
@@ -119,8 +118,6 @@ public class RidesFragment extends Fragment {
         ridesListener = query.addSnapshotListener((snapshots, e) -> {
             if (e != null) {
                 Log.w(TAG, "Listen failed.", e);
-                // Kita tidak memerlukan index khusus untuk query subcollection ini
-                // kecuali jika ada filter tambahan.
                 return;
             }
 
@@ -128,16 +125,13 @@ public class RidesFragment extends Fragment {
             if (snapshots != null && !snapshots.isEmpty()) {
                 for (DocumentSnapshot doc : snapshots) {
                     RideModel ride = doc.toObject(RideModel.class);
-                    // Validasi agar tidak crash jika ada data korup
                     if (ride != null) {
                         rideList.add(ride);
                     }
                 }
-                // Update UI: Tampilkan list, sembunyikan pesan kosong
                 rvRecentRides.setVisibility(View.VISIBLE);
                 tvNoRides.setVisibility(View.GONE);
             } else {
-                // Update UI: Sembunyikan list, tampilkan pesan kosong
                 rvRecentRides.setVisibility(View.GONE);
                 tvNoRides.setVisibility(View.VISIBLE);
             }

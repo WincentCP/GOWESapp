@@ -85,6 +85,13 @@
             android:screenOrientation="portrait"
             tools:ignore="LockedOrientationActivity" />
 
+        <!-- ADDED: History Activity -->
+        <activity
+            android:name=".RideHistoryActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity" />
+
     </application>
 
 </manifest>

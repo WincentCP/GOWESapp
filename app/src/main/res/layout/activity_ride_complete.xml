@@ -11,12 +11,18 @@
     <!-- Tombol "Back to Home" di Bawah -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_back_home"
-        style="@style/Gowes.Button.Primary"
+        style="@style/Widget.MaterialComponents.Button"
         android:layout_alignParentBottom="true"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
-        android:text="@string/back_to_home" />
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:backgroundTint="@color/primaryOrange"
+        app:cornerRadius="30dp"
+        android:fontFamily="@font/manrope_bold"
+        android:text="Back to Home"
+        android:textColor="@color/white"/>
 
     <!-- Tombol Download/Share -->
     <LinearLayout
@@ -66,7 +72,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Bagian Header Hijau (Height increased to 300dp to fix overlap) -->
+            <!-- Bagian Header Hijau -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="300dp"
@@ -115,7 +121,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp"
-                android:layout_marginTop="-50dp"> <!-- Adjusted overlap -->
+                android:layout_marginTop="-50dp">
 
                 <!-- Kartu Detail Perjalanan -->
                 <androidx.cardview.widget.CardView
@@ -131,6 +137,7 @@
                         android:padding="20dp">
 
                         <TextView
+                            android:id="@+id/tv_bike_name"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Bike Rental"
@@ -218,6 +225,7 @@
                             android:textStyle="bold"
                             android:layout_marginBottom="16dp" />
 
+                        <!-- Ride Charge -->
                         <RelativeLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -236,11 +244,33 @@
                                 android:layout_alignParentEnd="true" />
                         </RelativeLayout>
 
+                        <!-- Discount Row (ADDED THIS) -->
+                        <RelativeLayout
+                            android:id="@+id/layout_discount_row"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="8dp"
+                            android:visibility="gone"
+                            tools:visibility="visible">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Wallet Discount (5%)"
+                                android:textColor="@color/primaryGreen"/>
+                            <TextView
+                                android:id="@+id/tv_discount_amount"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="-Rp 0"
+                                android:textColor="@color/primaryGreen"
+                                android:layout_alignParentEnd="true" />
+                        </RelativeLayout>
+
                         <View
                             android:layout_width="match_parent"
                             android:layout_height="1dp"
                             android:background="@color/dividerColor"
-                            android:layout_marginTop="12dp"
+                            android:layout_marginTop="4dp"
                             android:layout_marginBottom="12dp" />
 
                         <RelativeLayout

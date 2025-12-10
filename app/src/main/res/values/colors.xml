@@ -31,5 +31,15 @@
 
     <!-- Scanner Screen (Bug 6 Fix) -->
     <color name="scannerBlack">#0A0A0A</color>
-    <color name="scannerOverlay">#99000000</color> <!-- Was A6000000, 60% alpha is clearer -->
+    <color name="scannerOverlay">#99000000</color>
+
+    <!-- ADDED: Missing Resources to fix build errors -->
+    <color name="divider_gray">#E0E0E0</color>
+    <color name="background_gray">#F5F5F5</color>
+    <color name="success_green">#4CAF50</color>
+    <color name="success_green_light">#E8F5E9</color>
+    <color name="warning_yellow">#FFC107</color>
+    <color name="warning_yellow_light">#FFF8E1</color>
+    <color name="error_red">#F44336</color>
+    <color name="error_red_light">#FFEBEE</color>
 </resources>
