@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
-import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -24,14 +23,12 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 
-import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
 public class ActiveRideActivity extends AppCompatActivity {
 
-    private static final String TAG = "ActiveRideActivity";
     private static final double RATE_PER_BLOCK = 8000.0;
     private static final double SECONDS_PER_BLOCK = 3600.0;
 
@@ -43,7 +40,7 @@ public class ActiveRideActivity extends AppCompatActivity {
     private long timeInMilliseconds = 0;
     private String bikeModel = "Gowes Bike";
     private String bikeId = "BK-UNKNOWN";
-    private String slotKey; // Menyimpan ID Slot (misal "slot_1")
+    private String slotKey;
 
     private double finalCalculatedCost = 0.0;
     private String finalRideDuration;
@@ -59,10 +56,8 @@ public class ActiveRideActivity extends AppCompatActivity {
                     new ActivityResultContracts.StartActivityForResult(),
                     result -> {
                         if (result.getResultCode() == RESULT_OK) {
-                            Toast.makeText(this, "Photo captured!", Toast.LENGTH_SHORT).show();
                             endRide();
                         } else {
-                            Toast.makeText(this, "Photo cancelled.", Toast.LENGTH_SHORT).show();
                             resumeTimerAfterCancel();
                         }
                     });
@@ -94,19 +89,14 @@ public class ActiveRideActivity extends AppCompatActivity {
             resumeRideState();
         }
 
-        // --- UPDATED LOGIC: TOMBOL PARK ---
         parkButton.setOnClickListener(v -> {
             timerHandler.removeCallbacks(timerRunnable);
             finalRideDuration = tvTimer.getText().toString();
-
-            // 1. STEP PERTAMA: BUKA SERVO (OPEN)
-            // Ini agar user bisa memasukkan sepeda ke dalam dock
             if (slotKey != null) {
                 updateServo(slotKey, "OPEN");
                 Toast.makeText(this, "Station Unlocked! Please insert bike.", Toast.LENGTH_SHORT).show();
             }
-
-            showDetectingDialog(); // Memulai proses detecting (delay 3 detik)
+            showDetectingDialog();
         });
 
         backHomeButton.setOnClickListener(v -> {
@@ -116,13 +106,10 @@ public class ActiveRideActivity extends AppCompatActivity {
         });
     }
 
-    // --- HELPER UNTUK UPDATE SERVO ---
     private void updateServo(String slot, String status) {
         DatabaseReference slotRef = FirebaseDatabase.getInstance("https://smartbike-c6082-default-rtdb.firebaseio.com/")
                 .getReference("stations/station_uph_medan/slots")
                 .child(slot);
-
-        // Kita hanya update status servo, status slot (Available) diupdate nanti saat finalisasi
         slotRef.child("servoStatus").setValue(status);
     }
 
@@ -183,8 +170,23 @@ public class ActiveRideActivity extends AppCompatActivity {
             db.collection("users").document(userId).get().addOnSuccessListener(snapshot -> {
                 if (snapshot.exists() && Boolean.TRUE.equals(snapshot.getBoolean("isActiveRide"))) {
                     currentRideDocId = snapshot.getString("currentRideId");
-                    startTime = System.currentTimeMillis();
-                    startTimer();
+                    if (currentRideDocId != null) {
+                        db.collection("rides").document(currentRideDocId).get().addOnSuccessListener(rideSnap -> {
+                            if (rideSnap.exists()) {
+                                Long start = rideSnap.getLong("startTime");
+                                if (start != null) startTime = start;
+
+                                String bId = rideSnap.getString("bikeId");
+                                if (bId != null) {
+                                    bikeId = bId;
+                                    // Assuming model is same as ID for simplicity or fetch properly
+                                    bikeModel = bId;
+                                    if(tvBikeName != null) tvBikeName.setText(bikeModel);
+                                }
+                                startTimer();
+                            }
+                        });
+                    }
                 } else {
                     finish();
                 }
@@ -206,7 +208,7 @@ public class ActiveRideActivity extends AppCompatActivity {
     }
 
     private void startTimer() {
-        timerHandler = new Handler(Looper.getMainLooper());
+        if (timerHandler == null) timerHandler = new Handler(Looper.getMainLooper());
         timerRunnable = new Runnable() {
             @Override
             public void run() {
@@ -214,28 +216,20 @@ public class ActiveRideActivity extends AppCompatActivity {
                 if (timeInMilliseconds < 0) timeInMilliseconds = 0;
 
                 long totalSeconds = timeInMilliseconds / 1000;
-                updateTimerUI(totalSeconds);
+                long hours = totalSeconds / 3600;
+                long minutes = (totalSeconds % 3600) / 60;
+                long seconds = totalSeconds % 60;
+                tvTimer.setText(String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds));
 
                 long totalBlocks = (long) Math.ceil(totalSeconds / SECONDS_PER_BLOCK);
                 if (totalBlocks == 0) totalBlocks = 1;
                 finalCalculatedCost = totalBlocks * RATE_PER_BLOCK;
-                updateCostUI(finalCalculatedCost);
+                tvCurrentCost.setText(String.format(Locale.getDefault(), "Rp %.0f", finalCalculatedCost));
 
                 timerHandler.postDelayed(this, 1000);
             }
         };
         timerHandler.postDelayed(timerRunnable, 0);
-    }
-
-    private void updateTimerUI(long totalSeconds) {
-        long hours = totalSeconds / 3600;
-        long minutes = (totalSeconds % 3600) / 60;
-        long seconds = totalSeconds % 60;
-        tvTimer.setText(String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds));
-    }
-
-    private void updateCostUI(double cost) {
-        tvCurrentCost.setText(formatCurrency(cost));
     }
 
     private void showDetectingDialog() {
@@ -250,18 +244,13 @@ public class ActiveRideActivity extends AppCompatActivity {
         }
         dialog.show();
 
-        // --- LOGIKA DELAY 3 DETIK ---
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             if (dialog.isShowing()) {
                 dialog.dismiss();
-
-                // 2. STEP KEDUA: TUTUP SERVO (LOCKED)
-                // Setelah 3 detik (waktu user memasukkan sepeda), kita kunci servo
                 if (slotKey != null) {
                     updateServo(slotKey, "LOCKED");
                     Toast.makeText(this, "Bike Locked Successfully!", Toast.LENGTH_SHORT).show();
                 }
-
                 showBikeDetectedDialog();
             }
         }, 3000);
@@ -289,16 +278,13 @@ public class ActiveRideActivity extends AppCompatActivity {
     }
 
     private void endRide() {
-        // Redundansi: Pastikan servo terkunci dan status slot diperbarui jadi Available
         if (slotKey != null && !slotKey.isEmpty()) {
             DatabaseReference slotRef = FirebaseDatabase.getInstance("https://smartbike-c6082-default-rtdb.firebaseio.com/")
                     .getReference("stations/station_uph_medan/slots")
                     .child(slotKey);
-
             Map<String, Object> updates = new HashMap<>();
-            updates.put("servoStatus", "LOCKED"); // Pastikan terkunci
-            updates.put("status", "Available");   // Ubah jadi Hijau di Home
-
+            updates.put("servoStatus", "LOCKED");
+            updates.put("status", "Available");
             slotRef.updateChildren(updates);
         }
 
@@ -308,7 +294,10 @@ public class ActiveRideActivity extends AppCompatActivity {
         db.collection("users").document(userId).update(updates);
 
         if (currentRideDocId == null) currentRideDocId = "ride_" + startTime;
-        db.collection("rides").document(currentRideDocId).update("status", "Completed");
+
+        long durationMs = timeInMilliseconds;
+        int baseCharge = (int) Math.round(finalCalculatedCost);
+        double co2Grams = (durationMs / 60000.0) * (1.1 / 45.0) * 1000.0;
 
         if (rtDbRef == null) {
             rtDbRef = FirebaseDatabase.getInstance("https://smartbike-c6082-default-rtdb.firebaseio.com/")
@@ -319,11 +308,8 @@ public class ActiveRideActivity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences("GowesAppPrefs", Context.MODE_PRIVATE);
         prefs.edit().clear().apply();
 
-        long durationMs = timeInMilliseconds;
-        int baseCharge = (int) Math.round(finalCalculatedCost);
-        double co2Grams = (durationMs / 60000.0) * (1.1 / 45.0) * 1000.0;
-
         Intent intent = new Intent(ActiveRideActivity.this, RideCompleteActivity.class);
+        intent.putExtra(RideCompleteActivity.EXTRA_RIDE_ID, currentRideDocId); // PASS RIDE ID
         intent.putExtra(RideCompleteActivity.EXTRA_RIDE_DURATION_MS, durationMs);
         intent.putExtra(RideCompleteActivity.EXTRA_BASE_CHARGE, baseCharge);
         intent.putExtra(RideCompleteActivity.EXTRA_PAYMENT_METHOD, paymentMethod);
@@ -332,13 +318,6 @@ public class ActiveRideActivity extends AppCompatActivity {
 
         startActivity(intent);
         finish();
-    }
-
-    private String formatCurrency(double amount) {
-        Locale localeID = new Locale("in", "ID");
-        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(localeID);
-        currencyFormatter.setMaximumFractionDigits(0);
-        return currencyFormatter.format(amount);
     }
 
     @Override

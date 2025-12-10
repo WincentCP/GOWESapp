@@ -18,7 +18,6 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
-import com.google.android.material.button.MaterialButton; // Tambahkan import ini
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -29,9 +28,12 @@ import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.SetOptions;
 
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -52,6 +54,9 @@ public class HomeFragment extends Fragment {
     private TextView tvUserName, tvWalletBalance;
     private TextView tvTotalRides, tvTimeSaved, tvCo2Saved;
     private TextView tvAvailableBikesCount, tvBikeStatus;
+
+    // Recent Ride Views
+    private TextView tvRideDate, tvRidePrice, tvBikeIdDuration;
 
     @Nullable
     @Override
@@ -78,6 +83,11 @@ public class HomeFragment extends Fragment {
 
         tvAvailableBikesCount = view.findViewById(R.id.tv_available_bikes_count);
         tvBikeStatus = view.findViewById(R.id.tv_bike_status);
+
+        // Initialize IDs matching item_recent_ride.xml
+        tvRideDate = view.findViewById(R.id.tv_ride_date);
+        tvRidePrice = view.findViewById(R.id.tv_ride_price);
+        tvBikeIdDuration = view.findViewById(R.id.tv_bike_id_duration);
 
         if (activeRideBanner != null) {
             activeRideBanner.setOnClickListener(v -> {
@@ -190,14 +200,9 @@ public class HomeFragment extends Fragment {
         });
     }
 
-    // =============================
-    //        FIXED DIALOG
-    // =============================
     private void showTopUpDialog() {
         if (getContext() == null) return;
 
-        // FIX: Removed R.style.BottomSheetDialogTheme to fix build error.
-        // If you need the custom theme, ensure it is defined in res/values/themes.xml first.
         BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
         View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_top_up_balance, null);
         dialog.setContentView(dialogView);
@@ -206,8 +211,6 @@ public class HomeFragment extends Fragment {
         dialogView.setFocusableInTouchMode(true);
 
         Button btnCancel = dialogView.findViewById(R.id.btn_cancel);
-
-        // --- FIX: Mengganti R.id.btn_top_up menjadi R.id.btn_pay_now sesuai XML ---
         Button btnTopUp = dialogView.findViewById(R.id.btn_pay_now);
         EditText etAmount = dialogView.findViewById(R.id.et_amount);
 
@@ -236,7 +239,6 @@ public class HomeFragment extends Fragment {
             btnCancel.setOnClickListener(v -> dialog.dismiss());
         }
 
-        // Logic Top Up
         if (btnTopUp != null) {
             btnTopUp.setOnClickListener(v -> {
                 String amountStr = etAmount.getText().toString().trim();
@@ -257,9 +259,6 @@ public class HomeFragment extends Fragment {
                     Toast.makeText(getContext(), "Invalid amount", Toast.LENGTH_SHORT).show();
                 }
             });
-        } else {
-            // Debugging log jika button masih null (seharusnya tidak null lagi)
-            Log.e(TAG, "Button Top Up (btn_pay_now) not found in dialog layout!");
         }
 
         dialog.show();
@@ -288,10 +287,98 @@ public class HomeFragment extends Fragment {
                     userRef.collection("transactions").add(txn);
                 })
                 .addOnFailureListener(e -> {
-                    // Jika user baru dan field belum ada, set manual
                     Map<String, Object> data = new HashMap<>();
                     data.put("walletBalance", amount);
                     userRef.set(data, SetOptions.merge()).addOnSuccessListener(v -> dialog.dismiss());
+                });
+    }
+
+    // =============================
+    //   FIX: Recent Ride Loading
+    // =============================
+    private void loadRecentRide(String userId) {
+        if (tvRidePrice == null) return;
+
+        // Query the 'rides' collection for the last completed ride for this user
+        db.collection("rides")
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("status", "Completed")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        // Manually parse map to handle different number types safely
+                        Map<String, Object> data = queryDocumentSnapshots.getDocuments().get(0).getData();
+                        if (data != null) {
+                            // 1. COST PARSING (Safe Double/Long/Integer conversion)
+                            double cost = 0;
+                            if (data.get("finalCost") instanceof Number) {
+                                cost = ((Number) data.get("finalCost")).doubleValue();
+                            } else if (data.get("baseCost") instanceof Number) {
+                                cost = ((Number) data.get("baseCost")).doubleValue();
+                            }
+
+                            tvRidePrice.setText(formatCurrency(cost));
+
+                            // 2. DATE PARSING
+                            long time = 0;
+                            if (data.get("timestamp") instanceof Number) {
+                                time = ((Number) data.get("timestamp")).longValue();
+                            } else if (data.get("startTime") instanceof Number) {
+                                time = ((Number) data.get("startTime")).longValue(); // Fallback
+                            }
+
+                            if (time > 0) {
+                                SimpleDateFormat sdf = new SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault());
+                                tvRideDate.setText(sdf.format(new Date(time)));
+                            }
+
+                            // 3. DURATION & BIKE PARSING
+                            String bikeId = (String) data.get("bikeId");
+                            if (bikeId == null) bikeId = "Bike";
+
+                            long seconds = 0;
+                            if (data.get("durationSeconds") instanceof Number) {
+                                seconds = ((Number) data.get("durationSeconds")).longValue();
+                            }
+
+                            String durationStr;
+                            if (seconds >= 3600) {
+                                long hrs = seconds / 3600;
+                                long mins = (seconds % 3600) / 60;
+                                durationStr = String.format(Locale.getDefault(), "%dhr %d min", hrs, mins);
+                            } else {
+                                long mins = seconds / 60;
+                                durationStr = String.format(Locale.getDefault(), "%d min", mins);
+                            }
+
+                            tvBikeIdDuration.setText(bikeId + " • " + durationStr);
+                        }
+                    } else {
+                        // Empty State
+                        tvRidePrice.setText("Rp 0");
+                        tvRideDate.setText("No rides yet");
+                        tvBikeIdDuration.setText("-");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading recent ride", e);
+                    // Fallback without ordering in case index is missing
+                    db.collection("rides")
+                            .whereEqualTo("userId", userId)
+                            .whereEqualTo("status", "Completed")
+                            .limit(1)
+                            .get()
+                            .addOnSuccessListener(snaps -> {
+                                if (!snaps.isEmpty()) {
+                                    // Simple fallback parse
+                                    Map<String, Object> d = snaps.getDocuments().get(0).getData();
+                                    if (d != null && d.get("finalCost") instanceof Number) {
+                                        tvRidePrice.setText(formatCurrency(((Number)d.get("finalCost")).doubleValue()));
+                                    }
+                                }
+                            });
                 });
     }
 
@@ -302,6 +389,7 @@ public class HomeFragment extends Fragment {
         if (user != null) {
             ensureUserDocumentExists(user);
             startUserListener(user.getUid());
+            loadRecentRide(user.getUid());
         }
     }
 
@@ -347,7 +435,7 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    private String formatCurrency(int amount) {
+    private String formatCurrency(double amount) {
         Locale localeID = new Locale("in", "ID");
         NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(localeID);
         currencyFormatter.setMaximumFractionDigits(0);

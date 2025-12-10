@@ -53,7 +53,7 @@
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
                         app:layout_constraintBottom_toBottomOf="parent">
-                        <!-- FIX: Changed src to ic_profile -->
+
                         <ImageView
                             android:id="@+id/iv_profile_pic"
                             android:layout_width="match_parent"
@@ -286,14 +286,12 @@
                         android:orientation="vertical"
                         android:gravity="center">
 
-                        <!-- Increased size: 48dp -> 64dp -->
                         <ImageView
                             android:layout_width="64dp"
                             android:layout_height="64dp"
                             android:src="@drawable/icon_bg_circle_blue"
                             android:padding="12dp"/>
 
-                        <!-- Increased size: 24dp -> 36dp, Adjusted Margin: -36dp -> -50dp -->
                         <ImageView
                             android:layout_width="36dp"
                             android:layout_height="36dp"
@@ -324,15 +322,12 @@
                         android:orientation="vertical"
                         android:gravity="center">
 
-                        <!-- Increased size: 48dp -> 64dp -->
                         <ImageView
                             android:layout_width="64dp"
                             android:layout_height="64dp"
                             android:src="@drawable/icon_bg_circle_green"
                             android:padding="12dp"/>
 
-                        <!-- Increased size: 24dp -> 36dp, Adjusted Margin: -36dp -> -50dp -->
-                        <!-- FIX: Changed src from ic_graph_white to ic_co2_saved_green, REMOVED TINT -->
                         <ImageView
                             android:layout_width="36dp"
                             android:layout_height="36dp"
@@ -363,15 +358,12 @@
                         android:orientation="vertical"
                         android:gravity="center">
 
-                        <!-- Increased size: 48dp -> 64dp -->
                         <ImageView
                             android:layout_width="64dp"
                             android:layout_height="64dp"
                             android:src="@drawable/icon_bg_circle_purple"
                             android:padding="12dp"/>
 
-                        <!-- Increased size: 24dp -> 36dp, Adjusted Margin: -36dp -> -50dp -->
-                        <!-- FIX: Removed tint for ic_rank_top10 -->
                         <ImageView
                             android:layout_width="36dp"
                             android:layout_height="36dp"
@@ -396,17 +388,16 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Menu Options -->
+            <!-- Menu Options Container -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:layout_marginTop="24dp"
                 android:background="@drawable/card_white_rounded"
-                android:divider="@drawable/upload_box_dashed"
                 android:showDividers="middle">
 
-                <!-- Personal Info -->
+                <!-- 1. Personal Info -->
                 <LinearLayout
                     android:id="@+id/btn_personal_info"
                     android:layout_width="match_parent"
@@ -421,12 +412,10 @@
                         android:src="@drawable/icon_bg_circle_blue"
                         android:padding="8dp"/>
                     <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_profile"
-                        android:layout_marginStart="-30dp"
-                        app:tint="#007AFF"/>
-
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_profile_blue"
+                        android:layout_marginStart="-34dp"/>
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -455,7 +444,7 @@
 
                 <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0" android:layout_marginStart="64dp"/>
 
-                <!-- Payment Methods -->
+                <!-- 2. Payment Methods -->
                 <LinearLayout
                     android:id="@+id/btn_payment_methods"
                     android:layout_width="match_parent"
@@ -470,12 +459,10 @@
                         android:src="@drawable/icon_bg_circle_green"
                         android:padding="8dp"/>
                     <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_wallet"
-                        android:layout_marginStart="-30dp"
-                        app:tint="#34A853"/>
-
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_payment_methods"
+                        android:layout_marginStart="-34dp"/>
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -504,7 +491,7 @@
 
                 <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0" android:layout_marginStart="64dp"/>
 
-                <!-- Ride History -->
+                <!-- 3. Ride History (Adjusted Size: 28dp, Margin: -34dp) -->
                 <LinearLayout
                     android:id="@+id/btn_ride_history"
                     android:layout_width="match_parent"
@@ -519,12 +506,10 @@
                         android:src="@drawable/icon_bg_circle_purple"
                         android:padding="8dp"/>
                     <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_ride_history"
-                        android:layout_marginStart="-30dp"
-                        app:tint="#9B51E0"/>
-
+                        android:layout_marginStart="-34dp"/>
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -550,6 +535,195 @@
                         android:src="@drawable/ic_arrow_right_gray"
                         app:tint="@color/textSecondary"/>
                 </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0" android:layout_marginStart="64dp"/>
+
+                <!-- 4. Notifications (Adjusted Size: 28dp, Margin: -34dp) -->
+                <LinearLayout
+                    android:id="@+id/btn_notifications"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical"
+                    android:background="?attr/selectableItemBackground">
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/icon_bg_circle_red"
+                        android:padding="8dp"/>
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_notifications"
+                        android:layout_marginStart="-34dp"/>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="24dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Notifications"
+                            android:textColor="@color/textPrimary"
+                            android:textStyle="bold"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Alerts &amp; preferences"
+                            android:textSize="12sp"
+                            android:textColor="@color/textSecondary"/>
+                    </LinearLayout>
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_arrow_right_gray"
+                        app:tint="@color/textSecondary"/>
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0" android:layout_marginStart="64dp"/>
+
+                <!-- 5. Privacy & Security (Adjusted Size: 28dp, Margin: -34dp) -->
+                <LinearLayout
+                    android:id="@+id/btn_privacy_security"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical"
+                    android:background="?attr/selectableItemBackground">
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/icon_bg_circle_blue"
+                        android:padding="8dp"/>
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_privacy_security"
+                        android:layout_marginStart="-34dp"/>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="24dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Privacy &amp; Security"
+                            android:textColor="@color/textPrimary"
+                            android:textStyle="bold"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Control your data"
+                            android:textSize="12sp"
+                            android:textColor="@color/textSecondary"/>
+                    </LinearLayout>
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_arrow_right_gray"
+                        app:tint="@color/textSecondary"/>
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0" android:layout_marginStart="64dp"/>
+
+                <!-- 6. Help & Support (Adjusted Size: 28dp, Margin: -34dp) -->
+                <LinearLayout
+                    android:id="@+id/btn_help_support"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical"
+                    android:background="?attr/selectableItemBackground">
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/icon_bg_circle_green"
+                        android:padding="8dp"/>
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_help_support"
+                        android:layout_marginStart="-34dp"/>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="24dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Help &amp; Support"
+                            android:textColor="@color/textPrimary"
+                            android:textStyle="bold"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Get assistance"
+                            android:textSize="12sp"
+                            android:textColor="@color/textSecondary"/>
+                    </LinearLayout>
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_arrow_right_gray"
+                        app:tint="@color/textSecondary"/>
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0" android:layout_marginStart="64dp"/>
+
+                <!-- 7. App Settings (Adjusted Size: 28dp, Margin: -34dp) -->
+                <LinearLayout
+                    android:id="@+id/btn_app_settings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical"
+                    android:background="?attr/selectableItemBackground">
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/icon_bg_circle_purple"
+                        android:padding="8dp"/>
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_app_settings"
+                        android:layout_marginStart="-34dp"/>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="24dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="App Settings"
+                            android:textColor="@color/textPrimary"
+                            android:textStyle="bold"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Customize your experience"
+                            android:textSize="12sp"
+                            android:textColor="@color/textSecondary"/>
+                    </LinearLayout>
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_arrow_right_gray"
+                        app:tint="@color/textSecondary"/>
+                </LinearLayout>
+
             </LinearLayout>
 
             <!-- Log Out Button -->

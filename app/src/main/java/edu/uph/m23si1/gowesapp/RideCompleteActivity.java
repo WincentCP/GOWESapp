@@ -4,8 +4,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.TextView;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -26,13 +26,13 @@ public class RideCompleteActivity extends AppCompatActivity {
     private TextView tvSubtitle, tvBikeName;
     private TextView tvRideDuration, tvAmountPaid, tvRideCharge, tvPaymentMethod, tvCo2Saved;
 
-    // FIXED: Discount row type MUST be RelativeLayout (matching XML)
     private RelativeLayout layoutDiscountRow;
     private TextView tvDiscountAmount;
 
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
 
+    public static final String EXTRA_RIDE_ID            = "EXTRA_RIDE_ID";
     public static final String EXTRA_RIDE_DURATION_MS   = "EXTRA_RIDE_DURATION_MS";
     public static final String EXTRA_BASE_CHARGE        = "EXTRA_BASE_CHARGE";
     public static final String EXTRA_PAYMENT_METHOD     = "EXTRA_PAYMENT_METHOD";
@@ -58,7 +58,6 @@ public class RideCompleteActivity extends AppCompatActivity {
         tvPaymentMethod = findViewById(R.id.tv_payment_method);
         tvCo2Saved      = findViewById(R.id.tv_co2_saved);
 
-        // FIX: correct type (RelativeLayout)
         layoutDiscountRow = findViewById(R.id.layout_discount_row);
         tvDiscountAmount = findViewById(R.id.tv_discount_amount);
 
@@ -96,6 +95,7 @@ public class RideCompleteActivity extends AppCompatActivity {
     private void populateRideDataAndProcessTransaction() {
         Intent intent = getIntent();
 
+        String rideId = intent.getStringExtra(EXTRA_RIDE_ID);
         long durationMs = intent.getLongExtra(EXTRA_RIDE_DURATION_MS, 0L);
         int baseCharge = intent.getIntExtra(EXTRA_BASE_CHARGE, DEFAULT_BASE_CHARGE);
         String paymentMethod = intent.getStringExtra(EXTRA_PAYMENT_METHOD);
@@ -103,12 +103,12 @@ public class RideCompleteActivity extends AppCompatActivity {
         String bikeId = intent.getStringExtra(EXTRA_BIKE_ID);
         double co2Grams = intent.getDoubleExtra(EXTRA_CO2_SAVED, 0.0);
 
-        // Discount
+        // Discount Logic
         double discountRate = paymentMethod.equalsIgnoreCase("Wallet") ? 0.05 : 0.0;
         int discountAmount = (int) Math.round(baseCharge * discountRate);
         int finalCharge = baseCharge - discountAmount;
 
-        // UI
+        // UI Updates
         tvRideDuration.setText(formatDuration(durationMs));
         tvBikeName.setText(bikeId != null ? bikeId : "Bike Rental");
         tvRideCharge.setText(formatCurrency(baseCharge));
@@ -124,23 +124,22 @@ public class RideCompleteActivity extends AppCompatActivity {
         }
 
         if (!isTransactionProcessed) {
-            processPaymentAndStats(finalCharge, bikeId, co2Grams);
+            processPaymentAndStats(finalCharge, baseCharge, discountAmount, bikeId, co2Grams, rideId, durationMs);
             isTransactionProcessed = true;
         }
     }
 
-    private void processPaymentAndStats(int amount, String bikeId, double co2Grams) {
+    private void processPaymentAndStats(int finalAmount, int baseAmount, int discount, String bikeId, double co2Grams, String rideId, long durationMs) {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null) return;
 
         DocumentReference userRef = db.collection("users").document(user.getUid());
 
-        // Deduct wallet
-        userRef.update("walletBalance", FieldValue.increment(-amount));
+        // 1. Deduct wallet
+        userRef.update("walletBalance", FieldValue.increment(-finalAmount));
 
-        // Stats
+        // 2. Update User Stats
         double co2Kg = co2Grams / 1000.0;
-
         userRef.update(
                 "stats.totalRides", FieldValue.increment(1),
                 "stats.totalCO2Saved", FieldValue.increment(co2Kg)
@@ -151,21 +150,37 @@ public class RideCompleteActivity extends AppCompatActivity {
             userRef.set(Map.of("stats", newStats), SetOptions.merge());
         });
 
-        // Wallet Transaction
+        // 3. Add Transaction Record
         Map<String, Object> txn = new HashMap<>();
-        txn.put("amount", -amount);
+        txn.put("amount", -finalAmount);
         txn.put("description", "Ride - " + (bikeId != null ? bikeId : "Bike"));
         txn.put("timestamp", System.currentTimeMillis());
         txn.put("type", "RidePayment");
         txn.put("status", "Success");
+        if (rideId != null) txn.put("rideId", rideId);
 
         userRef.collection("transactions").add(txn);
 
-        // Ride history
+        // 4. Update the MAIN Ride Document (Crucial for HomeFragment Recent Ride)
+        if (rideId != null) {
+            Map<String, Object> rideUpdates = new HashMap<>();
+            rideUpdates.put("finalCost", finalAmount);
+            rideUpdates.put("baseCost", baseAmount);
+            rideUpdates.put("discount", discount);
+            rideUpdates.put("durationSeconds", durationMs / 1000); // Save duration in seconds
+            rideUpdates.put("status", "Completed");
+            rideUpdates.put("co2SavedGrams", co2Grams);
+            rideUpdates.put("endTime", System.currentTimeMillis()); // Ensure we have an end time
+
+            db.collection("rides").document(rideId).set(rideUpdates, SetOptions.merge());
+        }
+
+        // 5. Add to Ride History Subcollection (Optional backup)
         Map<String, Object> rideHistoryItem = new HashMap<>();
         rideHistoryItem.put("bikeId", bikeId);
+        rideHistoryItem.put("rideId", rideId);
         rideHistoryItem.put("timestamp", System.currentTimeMillis());
-        rideHistoryItem.put("cost", amount);
+        rideHistoryItem.put("cost", finalAmount);
         rideHistoryItem.put("duration", tvRideDuration.getText().toString());
         rideHistoryItem.put("startStation", "UPH Medan Station");
 
@@ -177,7 +192,12 @@ public class RideCompleteActivity extends AppCompatActivity {
         long hours = totalSeconds / 3600;
         long minutes = (totalSeconds % 3600) / 60;
         long seconds = totalSeconds % 60;
-        return String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds);
+
+        if (hours > 0) {
+            return String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds);
+        } else {
+            return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds);
+        }
     }
 
     private String formatCurrency(int amount) {

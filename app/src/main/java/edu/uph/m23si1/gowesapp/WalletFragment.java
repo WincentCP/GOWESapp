@@ -1,17 +1,22 @@
 package edu.uph.m23si1.gowesapp;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -20,6 +25,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FieldValue; // Added missing import
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
@@ -48,6 +54,12 @@ public class WalletFragment extends Fragment {
     private TransactionAdapter transactionAdapter;
     private List<Transaction> transactionList;
 
+    // UI Components for Card/Linking
+    private CardView linkedCardView;
+    private CardView linkPaymentView;
+    private TextView tvCardLast4;
+    private ImageView btnRemoveCard;
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -59,29 +71,36 @@ public class WalletFragment extends Fragment {
         tvWalletBalance = view.findViewById(R.id.tv_wallet_balance_main);
         rvTransactions = view.findViewById(R.id.rv_transactions);
 
-        // 1. Setup RecyclerView
+        // Initialize Card UI Components
+        linkedCardView = view.findViewById(R.id.linked_card_view);
+        linkPaymentView = view.findViewById(R.id.link_payment_view);
+        tvCardLast4 = view.findViewById(R.id.tv_card_last4);
+        btnRemoveCard = view.findViewById(R.id.btn_remove_card);
+
         setupRecyclerView();
 
-        // 2. Setup Top Up Button
         View btnTopUp = view.findViewById(R.id.btn_top_up);
         if (btnTopUp != null) {
             btnTopUp.setOnClickListener(v -> showTopUpDialog());
+        }
+
+        // Setup Link Payment Click
+        if (linkPaymentView != null) {
+            linkPaymentView.setOnClickListener(v -> showLinkCardDialog());
+        }
+
+        // Setup Remove Card Click
+        if (btnRemoveCard != null) {
+            btnRemoveCard.setOnClickListener(v -> showRemoveCardConfirmation());
         }
 
         return view;
     }
 
     private void setupRecyclerView() {
-        // Initialize the list
         transactionList = new ArrayList<>();
-
-        // Initialize the adapter
         transactionAdapter = new TransactionAdapter(transactionList);
-
-        // Set the LayoutManager (this is crucial, otherwise list won't show)
         rvTransactions.setLayoutManager(new LinearLayoutManager(getContext()));
-
-        // Set the Adapter
         rvTransactions.setAdapter(transactionAdapter);
     }
 
@@ -107,22 +126,40 @@ public class WalletFragment extends Fragment {
         balanceListener = userDoc.addSnapshotListener((snapshot, e) -> {
             if (e != null || snapshot == null || !snapshot.exists()) return;
 
-            // Handle number format safely
+            // 1. Balance Update
             Number balance = snapshot.getDouble("walletBalance");
             if (balance == null) balance = 0.0;
-
             if (tvWalletBalance != null) {
                 tvWalletBalance.setText(formatCurrency(balance.doubleValue()));
             }
+
+            // 2. Card Link Status Update
+            Boolean isCardLinked = snapshot.getBoolean("isCardLinked");
+            String last4 = snapshot.getString("cardLast4"); // Assuming you save this field
+
+            updateCardUI(Boolean.TRUE.equals(isCardLinked), last4);
         });
     }
 
+    private void updateCardUI(boolean isLinked, String last4) {
+        if (isLinked) {
+            if (linkedCardView != null) linkedCardView.setVisibility(View.VISIBLE);
+            if (linkPaymentView != null) linkPaymentView.setVisibility(View.GONE);
+
+            if (tvCardLast4 != null) {
+                tvCardLast4.setText("•••• " + (last4 != null ? last4 : "4324"));
+            }
+        } else {
+            if (linkedCardView != null) linkedCardView.setVisibility(View.GONE);
+            if (linkPaymentView != null) linkPaymentView.setVisibility(View.VISIBLE);
+        }
+    }
+
     private void startTransactionsListener(String userId) {
-        // Query: users/{uid}/transactions, Ordered by timestamp DESC
         Query query = db.collection("users").document(userId)
                 .collection("transactions")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
-                .limit(20); // Limit to recent 20 items
+                .limit(20);
 
         transactionsListener = query.addSnapshotListener((snapshots, e) -> {
             if (e != null) {
@@ -131,20 +168,17 @@ public class WalletFragment extends Fragment {
             }
 
             if (snapshots != null) {
-                Log.d(TAG, "Loaded transactions: " + snapshots.size());
                 transactionList.clear();
                 for (QueryDocumentSnapshot doc : snapshots) {
                     try {
-                        // Manual parsing to ensure data is loaded even if POJO setters are missing
                         Double amount = doc.getDouble("amount");
                         String description = doc.getString("description");
                         Long timestamp = doc.getLong("timestamp");
                         String type = doc.getString("type");
                         String status = doc.getString("status");
 
-                        // Use defaults if fields are missing
                         double amtVal = amount != null ? amount : 0.0;
-                        String descVal = description != null ? description : "Unknown Transaction";
+                        String descVal = description != null ? description : "Transaction";
                         long timeVal = timestamp != null ? timestamp : System.currentTimeMillis();
                         String typeVal = type != null ? type : "General";
                         String statusVal = status != null ? status : "Completed";
@@ -155,15 +189,102 @@ public class WalletFragment extends Fragment {
                         Log.e(TAG, "Error parsing transaction", ex);
                     }
                 }
-                // Notify adapter to refresh the UI
                 transactionAdapter.notifyDataSetChanged();
             }
         });
     }
 
-    // =============================
-    //        TOP UP DIALOG
-    // =============================
+    private void showLinkCardDialog() {
+        if (getContext() == null) return;
+        BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
+        View view = LayoutInflater.from(getContext()).inflate(R.layout.dialog_link_payment, null);
+        dialog.setContentView(view);
+
+        EditText etCardNumber = view.findViewById(R.id.et_card_number);
+        EditText etExpiry = view.findViewById(R.id.et_expiry); // Assuming ID from your dialog layout
+        View btnLink = view.findViewById(R.id.btn_link);
+        View btnCancel = view.findViewById(R.id.btn_cancel);
+
+        // Add TextWatcher for Expiry Date Formatting (MM/YY)
+        if (etExpiry != null) {
+            etExpiry.addTextChangedListener(new TextWatcher() {
+                boolean isDeleting;
+
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    isDeleting = count > after;
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    if (!isDeleting && s.length() == 2 && !s.toString().contains("/")) {
+                        s.append("/");
+                    }
+                }
+            });
+        }
+
+        if (btnCancel != null) btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        if (btnLink != null) {
+            btnLink.setOnClickListener(v -> {
+                String cardNumber = etCardNumber.getText().toString().replaceAll("\\s+", "");
+
+                // Basic Validation
+                if (cardNumber.length() < 12) {
+                    Toast.makeText(getContext(), "Invalid Card Number", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                if (etExpiry != null && etExpiry.getText().length() < 5) {
+                    Toast.makeText(getContext(), "Invalid Expiry Date", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                // Extract last 4 digits
+                String last4 = cardNumber.substring(cardNumber.length() - 4);
+
+                // Update Firestore
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("isCardLinked", true);
+                updates.put("cardLast4", last4);
+
+                db.collection("users").document(mAuth.getCurrentUser().getUid())
+                        .set(updates, SetOptions.merge())
+                        .addOnSuccessListener(a -> {
+                            Toast.makeText(getContext(), "Card Linked!", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        })
+                        .addOnFailureListener(e -> Toast.makeText(getContext(), "Failed to link card", Toast.LENGTH_SHORT).show());
+            });
+        }
+        dialog.show();
+    }
+
+    private void showRemoveCardConfirmation() {
+        if (getContext() == null) return;
+
+        new AlertDialog.Builder(getContext())
+                .setTitle("Remove Card")
+                .setMessage("Are you sure you want to remove this payment method?")
+                .setPositiveButton("Remove", (dialog, which) -> removeLinkedCard())
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void removeLinkedCard() {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("isCardLinked", false);
+        updates.put("cardLast4", FieldValue.delete()); // Remove field
+
+        db.collection("users").document(mAuth.getCurrentUser().getUid())
+                .update(updates)
+                .addOnSuccessListener(a -> Toast.makeText(getContext(), "Card Removed", Toast.LENGTH_SHORT).show());
+    }
+
     private void showTopUpDialog() {
         if (getContext() == null) return;
 
@@ -248,7 +369,6 @@ public class WalletFragment extends Fragment {
                     txn.put("status", "Success");
                     txn.put("timestamp", System.currentTimeMillis());
 
-                    // Add to transactions subcollection
                     userRef.collection("transactions").add(txn);
                 })
                 .addOnFailureListener(e -> {

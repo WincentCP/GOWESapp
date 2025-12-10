@@ -2,12 +2,13 @@ package edu.uph.m23si1.gowesapp;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler; // Import untuk delay
-import android.os.Looper;  // Import untuk delay di thread utama
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -18,8 +19,8 @@ import androidx.cardview.widget.CardView;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.DatabaseReference; // Import Realtime DB
-import com.google.firebase.database.FirebaseDatabase; // Import Realtime DB
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -40,9 +41,14 @@ public class ConfirmRideActivity extends AppCompatActivity {
     private MaterialButton btnConfirmRide;
     private RelativeLayout layoutDiscount;
 
+    // Dynamic Views for Toggle
+    private LinearLayout linkCardPrompt;
+    private LinearLayout linkedCardDetails;
+    private TextView tvPayAsYouGoTitle;
+
     // Data
     private String bikeId;
-    private String slotKey; // ID Slot (misal "slot_1") dari BikeDetails
+    private String slotKey;
     private double walletBalance = 0.0;
     private static final double HOURLY_RATE = 8000.0;
     private static final double DISCOUNT_RATE = 0.05; // 5%
@@ -50,6 +56,7 @@ public class ConfirmRideActivity extends AppCompatActivity {
 
     // State
     private String selectedMethod = "Wallet"; // Default
+    private boolean isCardLinked = false;
 
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
@@ -62,17 +69,13 @@ public class ConfirmRideActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
 
-        // Get extras
         bikeId = getIntent().getStringExtra("BIKE_ID");
         slotKey = getIntent().getStringExtra("SLOT_KEY");
 
         initViews();
         setupListeners();
-
-        // Initial setup
         updateBikeInfo();
-        fetchWalletBalance();
-        selectPaymentMethod("Wallet"); // Set default
+        fetchUserData();
     }
 
     private void initViews() {
@@ -88,22 +91,49 @@ public class ConfirmRideActivity extends AppCompatActivity {
         radioBtnPayg = findViewById(R.id.radio_btn_payg);
         radioBtnWallet = findViewById(R.id.radio_btn_wallet);
 
+        // Find toggleable views
+        linkCardPrompt = findViewById(R.id.link_card_prompt);
+        linkedCardDetails = findViewById(R.id.linked_card_details);
+
+        // Find Title dynamically based on XML structure provided
+        if (payAsYouGoCard != null && payAsYouGoCard.getChildCount() > 0) {
+            View child0 = payAsYouGoCard.getChildAt(0); // Main LinearLayout
+            if (child0 instanceof LinearLayout) {
+                LinearLayout mainContainer = (LinearLayout) child0;
+                View childHeader = mainContainer.getChildAt(0); // Horizontal Header
+                if (childHeader instanceof LinearLayout) {
+                    LinearLayout header = (LinearLayout) childHeader;
+                    // XML: Radio(0), Icon(1), Title(2), Chip(3)
+                    if (header.getChildCount() > 2) {
+                        View titleView = header.getChildAt(2);
+                        if (titleView instanceof TextView) {
+                            tvPayAsYouGoTitle = (TextView) titleView;
+                        }
+                    }
+                }
+            }
+        }
+
         btnInlineTopUp = findViewById(R.id.btn_inline_top_up);
         btnConfirmRide = findViewById(R.id.btn_confirm);
-
         layoutDiscount = findViewById(R.id.layout_discount);
     }
 
     private void setupListeners() {
         if(ivBack != null) ivBack.setOnClickListener(v -> finish());
 
-        // Custom Radio Selection Logic
-        if(payAsYouGoCard != null) payAsYouGoCard.setOnClickListener(v -> selectPaymentMethod("PayAsYouGo"));
+        if(payAsYouGoCard != null) payAsYouGoCard.setOnClickListener(v -> {
+            if (isCardLinked) {
+                selectPaymentMethod("PayAsYouGo");
+            } else {
+                showLinkCardDialog();
+            }
+        });
+
         if(useWalletCard != null) useWalletCard.setOnClickListener(v -> selectPaymentMethod("Wallet"));
 
         if(btnConfirmRide != null) btnConfirmRide.setOnClickListener(v -> startRide());
 
-        // Top Up Logic
         if(btnInlineTopUp != null) {
             btnInlineTopUp.setOnClickListener(v -> showTopUpDialog());
         }
@@ -111,17 +141,12 @@ public class ConfirmRideActivity extends AppCompatActivity {
 
     private void updateBikeInfo() {
         if (tvBikeName == null) return;
-
         if (bikeId != null) {
-            String display = bikeId;
-            if (!display.startsWith("Bike") && display.startsWith("BK")) {
-                display = "Bike " + display;
-            }
+            String display = bikeId.startsWith("Bike") || bikeId.startsWith("BK") ? bikeId : "Bike " + bikeId;
             tvBikeName.setText(display);
         } else {
             tvBikeName.setText("Gowes Electric Bike");
         }
-
         if(tvStandardRate != null) tvStandardRate.setText("Rp " + formatMoney(HOURLY_RATE));
     }
 
@@ -129,34 +154,29 @@ public class ConfirmRideActivity extends AppCompatActivity {
         this.selectedMethod = method;
 
         if ("Wallet".equals(method)) {
-            // UI Selection State: Wallet Active
             if(payAsYouGoCard != null) payAsYouGoCard.setBackgroundResource(R.drawable.card_payment_unselected);
-            if(radioBtnPayg != null) radioBtnPayg.setImageResource(R.drawable.ic_radio_button_unchecked);
+            if(radioBtnPayg != null) {
+                radioBtnPayg.setImageResource(isCardLinked ? R.drawable.ic_radio_button_unchecked : R.drawable.ic_add);
+            }
 
             if(useWalletCard != null) useWalletCard.setBackgroundResource(R.drawable.card_payment_selected);
             if(radioBtnWallet != null) radioBtnWallet.setImageResource(R.drawable.ic_radio_button_checked);
 
-            // Pricing Breakdown Logic (With Discount)
             if(layoutDiscount != null) layoutDiscount.setVisibility(View.VISIBLE);
-
-            double discount = HOURLY_RATE * DISCOUNT_RATE;
-
-            if(tvDiscountAmount != null) tvDiscountAmount.setText("-Rp " + formatMoney(discount));
+            if(tvDiscountAmount != null) tvDiscountAmount.setText("-Rp " + formatMoney(HOURLY_RATE * DISCOUNT_RATE));
 
         } else {
-            // UI Selection State: PayAsYouGo Active
             if(payAsYouGoCard != null) payAsYouGoCard.setBackgroundResource(R.drawable.card_payment_selected);
             if(radioBtnPayg != null) radioBtnPayg.setImageResource(R.drawable.ic_radio_button_checked);
 
             if(useWalletCard != null) useWalletCard.setBackgroundResource(R.drawable.card_payment_unselected);
             if(radioBtnWallet != null) radioBtnWallet.setImageResource(R.drawable.ic_radio_button_unchecked);
 
-            // Pricing Breakdown Logic (No Discount)
             if(layoutDiscount != null) layoutDiscount.setVisibility(View.GONE);
         }
     }
 
-    private void fetchWalletBalance() {
+    private void fetchUserData() {
         if (mAuth.getCurrentUser() == null) return;
         db.collection("users").document(mAuth.getCurrentUser().getUid())
                 .addSnapshotListener((snapshot, e) -> {
@@ -165,8 +185,76 @@ public class ConfirmRideActivity extends AppCompatActivity {
                         Double bal = snapshot.getDouble("walletBalance");
                         walletBalance = bal != null ? bal : 0.0;
                         if (tvWalletBalance != null) tvWalletBalance.setText("Balance: Rp " + formatMoney(walletBalance));
+
+                        Boolean linked = snapshot.getBoolean("isCardLinked");
+                        isCardLinked = Boolean.TRUE.equals(linked);
+
+                        updateCardUI();
                     }
                 });
+    }
+
+    private void updateCardUI() {
+        if (!isCardLinked) {
+            // State: Not Linked -> Show "Link Card" prompts
+            if (tvPayAsYouGoTitle != null) {
+                tvPayAsYouGoTitle.setText("Link Credit Card");
+                tvPayAsYouGoTitle.setTextColor(getResources().getColor(R.color.primaryOrange));
+            }
+            if (radioBtnPayg != null) radioBtnPayg.setImageResource(R.drawable.ic_add);
+
+            // Show prompt, hide details
+            if (linkCardPrompt != null) linkCardPrompt.setVisibility(View.VISIBLE);
+            if (linkedCardDetails != null) linkedCardDetails.setVisibility(View.GONE);
+
+            // Force reset selection if user was on unlinked card
+            if ("PayAsYouGo".equals(selectedMethod)) {
+                selectPaymentMethod("Wallet");
+            }
+        } else {
+            // State: Linked -> Show Card Details
+            if (tvPayAsYouGoTitle != null) {
+                tvPayAsYouGoTitle.setText("Pay-as-you-go");
+                tvPayAsYouGoTitle.setTextColor(getResources().getColor(R.color.textPrimary));
+            }
+            if (radioBtnPayg != null) {
+                radioBtnPayg.setImageResource("PayAsYouGo".equals(selectedMethod) ?
+                        R.drawable.ic_radio_button_checked : R.drawable.ic_radio_button_unchecked);
+            }
+
+            // Hide prompt, show details
+            if (linkCardPrompt != null) linkCardPrompt.setVisibility(View.GONE);
+            if (linkedCardDetails != null) linkedCardDetails.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void showLinkCardDialog() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_link_payment, null);
+        dialog.setContentView(view);
+
+        // BUG FIX: Updated ID to 'btn_link' to match your XML
+        View btnLink = view.findViewById(R.id.btn_link);
+        View btnCancel = view.findViewById(R.id.btn_cancel);
+
+        if (btnCancel != null) {
+            btnCancel.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        if(btnLink != null) {
+            btnLink.setOnClickListener(v -> {
+                // Here we would normally validate inputs
+                // For now, proceed to link
+                db.collection("users").document(mAuth.getCurrentUser().getUid())
+                        .update("isCardLinked", true)
+                        .addOnSuccessListener(a -> {
+                            Toast.makeText(this, "Card Linked Successfully!", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        })
+                        .addOnFailureListener(e -> Toast.makeText(this, "Failed to link card", Toast.LENGTH_SHORT).show());
+            });
+        }
+        dialog.show();
     }
 
     private void showTopUpDialog() {
@@ -174,7 +262,7 @@ public class ConfirmRideActivity extends AppCompatActivity {
         dialog.setContentView(R.layout.dialog_top_up_balance);
 
         Button btnCancel = dialog.findViewById(R.id.btn_cancel);
-        Button btnTopUp = dialog.findViewById(R.id.btn_top_up);
+        Button btnTopUp = dialog.findViewById(R.id.btn_pay_now); // Assuming ID based on previous context
         EditText etAmount = dialog.findViewById(R.id.et_amount);
 
         // Preset buttons logic
@@ -240,65 +328,53 @@ public class ConfirmRideActivity extends AppCompatActivity {
 
     private void startRide() {
         if ("Wallet".equals(selectedMethod)) {
-            // Check balance (Require at least initial hold or some minimum)
             if (walletBalance < 10000) {
                 Toast.makeText(this, "Insufficient balance. Please top up.", Toast.LENGTH_LONG).show();
                 return;
             }
-        }
-
-        // VALIDASI SLOT KEY (Pastikan dikirim dari halaman sebelumnya)
-        if (slotKey == null || slotKey.isEmpty()) {
-            Toast.makeText(this, "Error: Slot ID missing. Please rescan.", Toast.LENGTH_SHORT).show();
-            // slotKey = "slot_1"; // Uncomment untuk testing tanpa intent
+        } else if ("PayAsYouGo".equals(selectedMethod) && !isCardLinked) {
+            showLinkCardDialog();
             return;
         }
 
-        // 1. Ubah tombol jadi loading
+        if (slotKey == null || slotKey.isEmpty()) {
+            Toast.makeText(this, "Error: Slot ID missing. Please rescan.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         btnConfirmRide.setEnabled(false);
         btnConfirmRide.setText("Unlocking Station...");
 
-        // 2. Referensi Database (Gunakan URL spesifik Anda)
         DatabaseReference slotRef = FirebaseDatabase.getInstance("https://smartbike-c6082-default-rtdb.firebaseio.com/")
                 .getReference("stations/station_uph_medan/slots")
                 .child(slotKey);
 
-        // 3. LOGIKA BUKA SERVO (STEP 1)
-        // Kirim perintah "OPEN" dan ubah status jadi "InUse"
         Map<String, Object> updates = new HashMap<>();
         updates.put("servoStatus", "OPEN");
         updates.put("status", "InUse");
 
         slotRef.updateChildren(updates).addOnSuccessListener(aVoid -> {
-            // Beritahu user stasiun terbuka
-            Toast.makeText(ConfirmRideActivity.this, "Station Unlocked! Please take the bike.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(ConfirmRideActivity.this, "Station Unlocked!", Toast.LENGTH_SHORT).show();
 
-            // 4. LOGIKA TUTUP KEMBALI (STEP 2 - Delay 3 Detik)
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
-
-                // Kunci kembali servo (Reset mekanik dock)
                 slotRef.child("servoStatus").setValue("LOCKED");
 
-                // Pindah ke Halaman Timer (Active Ride)
                 Intent intent = new Intent(ConfirmRideActivity.this, ActiveRideActivity.class);
                 intent.putExtra("IS_NEW_RIDE", true);
                 intent.putExtra("BIKE_ID", bikeId);
-                if(tvBikeName != null) {
-                    intent.putExtra("BIKE_MODEL", tvBikeName.getText().toString());
-                }
-                intent.putExtra("SLOT_KEY", slotKey); // Teruskan SlotKey ke Timer (untuk pengembalian nanti)
+                intent.putExtra("BIKE_MODEL", tvBikeName != null ? tvBikeName.getText().toString() : bikeId);
+                intent.putExtra("SLOT_KEY", slotKey);
                 intent.putExtra(RideCompleteActivity.EXTRA_PAYMENT_METHOD, selectedMethod);
 
                 startActivity(intent);
                 finish();
 
-            }, 3000); // Delay 3000ms (3 detik)
+            }, 3000);
 
         }).addOnFailureListener(e -> {
-            // Gagal Update Database
             btnConfirmRide.setEnabled(true);
             btnConfirmRide.setText("Confirm & Start Ride");
-            Toast.makeText(ConfirmRideActivity.this, "Connection Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(ConfirmRideActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         });
     }
 
